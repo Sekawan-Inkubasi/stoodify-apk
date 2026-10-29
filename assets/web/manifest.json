@@ -1,0 +1,23 @@
+{
+  "short_name": "Stoodify",
+  "name": "Stoodify - Asisten Belajar Pintar",
+  "icons": [
+    {
+      "src": "/logo_stoodify.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo_stoodify.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0066FF",
+  "theme_color": "#0066FF",
+  "display": "standalone",
+  "orientation": "portrait"
+}
