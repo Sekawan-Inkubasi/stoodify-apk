@@ -12,6 +12,7 @@ import {
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { APP_URL } from './src/constants/config';
+import { StoodifyProvider } from './src/context/StoodifyContext';
 
 function StoodifyWebView() {
   const insets = useSafeAreaInsets();
@@ -128,7 +129,9 @@ function StoodifyWebView() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StoodifyWebView />
+      <StoodifyProvider>
+        <StoodifyWebView />
+      </StoodifyProvider>
     </SafeAreaProvider>
   );
 }
