@@ -2,19 +2,20 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   StatusBar,
   BackHandler,
   ActivityIndicator,
   Text,
-  TouchableOpacity,
+  Pressable,
   Platform,
 } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 const APP_URL = 'https://stoodify-mobile-app.vercel.app';
 
-export default function App() {
+function StoodifyWebView() {
+  const insets = useSafeAreaInsets();
   const webViewRef = useRef(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,9 +28,9 @@ export default function App() {
     const onBackPress = () => {
       if (canGoBack && webViewRef.current) {
         webViewRef.current.goBack();
-        return true; // handled
+        return true;
       }
-      return false; // let system exit app
+      return false;
     };
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -45,8 +46,18 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0066FF" />
+    <View
+      style={[
+        styles.root,
+        {
+          paddingBottom: insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <View style={[styles.topInsetSpacer, { height: insets.top }]} />
       <View style={styles.container}>
         <WebView
           ref={webViewRef}
@@ -62,6 +73,8 @@ export default function App() {
           cacheEnabled={true}
           allowsBackForwardNavigationGestures={true}
           originWhitelist={['*']}
+          overScrollMode="never"
+          bounces={false}
           androidCameraPermissionOptions={{
             title: 'Izin Kamera Stoodify',
             message: 'Stoodify membutuhkan akses kamera untuk memindai soal belajar.',
@@ -100,20 +113,34 @@ export default function App() {
             <Text style={styles.errorMessage}>
               Tidak dapat terhubung ke server Stoodify. Pastikan kuota atau koneksi internet perangkat aktif.
             </Text>
-            <TouchableOpacity style={styles.retryButton} onPress={handleRetry} activeOpacity={0.8}>
+            <Pressable
+              style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+              onPress={handleRetry}
+            >
               <Text style={styles.retryButtonText}>Coba Lagi</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <StoodifyWebView />
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
-    backgroundColor: '#0066FF',
+    backgroundColor: '#FFFFFF',
+  },
+  topInsetSpacer: {
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
@@ -184,6 +211,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
+  },
+  retryButtonPressed: {
+    opacity: 0.8,
   },
   retryButtonText: {
     color: '#FFFFFF',
