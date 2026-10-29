@@ -35,16 +35,16 @@ jobs:
       - name: Make Gradlew Executable
         run: chmod +x android/gradlew
 
-      - name: Build Android Debug APK
+      - name: Build Android Release APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Stoodify-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Stoodify-Release-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -54,6 +54,6 @@ jobs:
           tag_name: v1.0.0
           name: Stoodify Mobile v1.0.0 (APK)
           body: "File APK installer resmi aplikasi mobile Stoodify untuk perangkat Android."
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: android/app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
