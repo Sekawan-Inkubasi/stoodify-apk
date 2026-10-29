@@ -86,19 +86,47 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
 
 ---
 
+## 🔢 Panduan Mengubah Versi Aplikasi (Versioning & versionCode)
+
+Agar nomor versi pada file APK yang dihasilkan tidak tertahan di `1.0.0` dan pengguna dapat memperbarui (*update*) aplikasi di HP Android tanpa error penolakan versi, ubah dua properti di file **`app.json`**:
+
+```json
+{
+  "expo": {
+    "version": "1.1.0",           // <-- [1] Teks versi yang dilihat pengguna (versionName)
+    "android": {
+      "versionCode": 2,          // <-- [2] Angka integer OS Android (WAJIB NAIK +1 setiap rilis)
+      ...
+    }
+  }
+}
+```
+
+| Properti di `app.json` | Contoh Nilai | Aturan & Fungsi |
+| :--- | :---: | :--- |
+| **`expo.version`** | `"1.1.0"`, `"1.2.0"` | String versi yang tampil di menu *Info Aplikasi* di pengaturan HP Android dan di GitHub Releases. |
+| **`android.versionCode`** | `1`, `2`, `3`, dst. | Angka bulat positif yang dibaca oleh sistem OS Android. **Wajib selalu ditambah +1 setiap kali rilis baru**, karena Android akan menolak instalasi update jika `versionCode` baru lebih kecil atau sama dengan versi yang sudah terpasang di HP. |
+
+*(Saat skrip `npm run build:apk` atau GitHub Actions berjalan, Expo CNG otomatis membaca kedua nilai ini dan menginjeksinya ke dalam `android/app/build.gradle`).*
+
+---
+
 ## 🏷️ Otomatisasi Release APK via GitHub Actions (Git Tag)
 
 Selain mem-build secara lokal, repositori ini telah dikonfigurasi dengan **GitHub Actions** untuk mem-build APK secara otomatis di cloud dan langsung mempublikasikannya ke tab **GitHub Releases** setiap kali Anda membuat Git Tag baru:
 
-### Cara Memicu Rilis Otomatis:
+### Alur Rilis Versi Baru:
 ```bash
-# 1. Pastikan perubahan sudah di-commit dan di-push ke main
+# 1. Ubah "version" dan naikkan "versionCode" di app.json (misal version: "1.1.0", versionCode: 2)
+# 2. Commit dan push ke main
+git add app.json
+git commit -m "chore(release): bump version to 1.1.0"
 git push origin main
 
-# 2. Buat git tag versi rilis (misal v1.1.0)
+# 3. Buat git tag rilis sesuai versi
 git tag v1.1.0
 
-# 3. Push tag ke GitHub
+# 4. Push tag ke GitHub
 git push origin v1.1.0
 ```
 
