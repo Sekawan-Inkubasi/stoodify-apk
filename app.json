@@ -7,11 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0066FF"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "id.stoodify.app"
@@ -34,6 +29,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "11769398-c323-4c35-80b9-8ec88dc66af0"
+      }
     }
   }
 }
