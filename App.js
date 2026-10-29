@@ -11,8 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-
-const APP_URL = 'https://stoodify-mobile-app.vercel.app';
+import { APP_URL } from './src/constants/config';
 
 function StoodifyWebView() {
   const insets = useSafeAreaInsets();
