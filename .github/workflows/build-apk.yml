@@ -2,7 +2,10 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*'
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -10,6 +13,7 @@ permissions:
 
 jobs:
   build:
+    name: Build & Release APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -35,6 +39,13 @@ jobs:
       - name: Generate Android Native Project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Copy Web Assets to Android Native
+        run: |
+          mkdir -p android/app/src/main/assets/web
+          if [ -d "assets/web" ]; then
+            cp -r assets/web/* android/app/src/main/assets/web/
+          fi
+
       - name: Make Gradlew Executable
         run: chmod +x android/gradlew
 
@@ -43,20 +54,41 @@ jobs:
           cd android
           ./gradlew assembleRelease --no-daemon
 
+      - name: Prepare APK Release Artifacts
+        run: |
+          VERSION_TAG="${GITHUB_REF_NAME:-latest}"
+          cp android/app/build/outputs/apk/release/app-release.apk "android/app/build/outputs/apk/release/stoodify-${VERSION_TAG}.apk"
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Stoodify-Release-APK
+          name: Stoodify-${{ github.ref_name }}-APK
           path: android/app/build/outputs/apk/release/app-release.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        continue-on-error: true
-        if: github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: v1.0.0
-          name: Stoodify Mobile v1.0.0 (APK)
-          body: "File APK installer resmi aplikasi mobile Stoodify untuk perangkat Android."
-          files: android/app/build/outputs/apk/release/app-release.apk
+          tag_name: ${{ github.ref_name }}
+          name: Stoodify Mobile ${{ github.ref_name }} (APK)
+          body: |
+            ## 📱 Stoodify Mobile Release ${{ github.ref_name }}
+
+            File installer resmi aplikasi Stoodify (APK) untuk perangkat Android.
+
+            ### 📦 Informasi Rilis
+            - **Versi Tag:** `${{ github.ref_name }}`
+            - **Commit SHA:** `${{ github.sha }}`
+            - **Target Arsitektur:** Android ARM64 (`arm64-v8a`) & Universal
+            - **Aplikasi:** 100% Offline-First Embedded Bundle
+
+            ### 📥 Cara Pasang di HP Android
+            1. Unduh berkas `stoodify-${{ github.ref_name }}.apk` di bagian *Assets* di bawah.
+            2. Buka file APK yang telah diunduh di perangkat Android Anda.
+            3. Jika muncul dialog perizinan *Install from unknown sources*, pilih **Izinkan** / **Allow**.
+            4. Buka aplikasi **Stoodify** dan selamat belajar!
+          files: |
+            android/app/build/outputs/apk/release/stoodify-${{ github.ref_name }}.apk
+            android/app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

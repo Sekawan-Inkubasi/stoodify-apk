@@ -24,7 +24,7 @@ my-projects/
 ## 📱 Fitur Container Mobile
 
 - **100% Offline-First:** Aset web hasil kompilasi ditanam langsung di dalam aset native APK (`android/app/src/main/assets/web/`), sehingga aplikasi dapat dibuka seketika dalam 0 detik tanpa kuota internet.
-- **Launcher Icon Resmi Stoodify:** Icon aplikasi di launcher Android menggunakan logo resmi Stoodify dengan safe-zone padding dan latar belakang `#0066FF`.
+- **Launcher Icon Resmi Stoodify:** Icon aplikasi di launcher Android menggunakan logo resmi Stoodify warna biru (`#0062FF`) dengan proporsi safe-zone padding (~47% canvas) dan latar belakang putih bersih (`#FFFFFF`).
 - **Hardware Back Button Handling:** Tombol kembali fisik Android bernavigasi mundur pada riwayat web dan tidak langsung menutup aplikasi secara tidak sengaja.
 - **Safe Area & Notch Handling:** Status bar dan navigasi bawah otomatis menyesuaikan poni layar perangkat secara presisi melalui `react-native-safe-area-context`.
 - **Dukungan Kamera:** Menangani dialog izin sensor perangkat Android (`CAMERA`, `RECORD_AUDIO`) untuk kebutuhan pemindaian soal belajar.
@@ -83,6 +83,30 @@ Pasang langsung ke smartphone Android via USB Debugging:
 ```bash
 adb install -r android/app/build/outputs/apk/release/app-release.apk
 ```
+
+---
+
+## 🏷️ Otomatisasi Release APK via GitHub Actions (Git Tag)
+
+Selain mem-build secara lokal, repositori ini telah dikonfigurasi dengan **GitHub Actions** untuk mem-build APK secara otomatis di cloud dan langsung mempublikasikannya ke tab **GitHub Releases** setiap kali Anda membuat Git Tag baru:
+
+### Cara Memicu Rilis Otomatis:
+```bash
+# 1. Pastikan perubahan sudah di-commit dan di-push ke main
+git push origin main
+
+# 2. Buat git tag versi rilis (misal v1.1.0)
+git tag v1.1.0
+
+# 3. Push tag ke GitHub
+git push origin v1.1.0
+```
+
+### Apa yang Terjadi di GitHub:
+1. GitHub Actions runner akan otomatis mendeteksi tag `v*` dan menjalankan workflow `.github/workflows/build-apk.yml`.
+2. Cloud runner mengompilasi APK release Android mandiri (~9.9 MB) lengkap dengan aset web offline.
+3. Otomatis membuat entri **GitHub Release** baru dengan nama `Stoodify Mobile v1.1.0 (APK)`.
+4. Melampirkan file APK `stoodify-v1.1.0.apk` yang dapat langsung diunduh oleh publik / tim penguji.
 
 ---
 
