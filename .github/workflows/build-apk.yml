@@ -1,19 +1,19 @@
-name: Build Android APK
+name: Build Android APK (Manual Trigger)
 
 on:
-  push:
-    tags:
-      - 'v*'
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Nama Tag Rilis (Opsional, contoh: v1.1.0)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build & Release APK
+    name: Build APK (Manual)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -39,6 +39,17 @@ jobs:
       - name: Generate Android Native Project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Configure APK Size Optimizations
+        run: |
+          cat << 'EOF' >> android/gradle.properties
+          # Optimasi Ukuran Binary APK (~9.9 MB)
+          reactNativeArchitectures=arm64-v8a
+          expo.useLegacyPackaging=true
+          android.enableShrinkResourcesInReleaseBuilds=true
+          android.enableMinifyInReleaseBuilds=true
+          android.enablePngCrunchInReleaseBuilds=true
+          EOF
+
       - name: Copy Web Assets to Android Native
         run: |
           mkdir -p android/app/src/main/assets/web
@@ -52,43 +63,44 @@ jobs:
       - name: Build Android Release APK
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease \
+            -PreactNativeArchitectures=arm64-v8a \
+            -Pexpo.useLegacyPackaging=true \
+            -Pandroid.enableShrinkResourcesInReleaseBuilds=true \
+            -Pandroid.enableMinifyInReleaseBuilds=true \
+            -Pandroid.enablePngCrunchInReleaseBuilds=true \
+            --no-daemon
 
-      - name: Prepare APK Release Artifacts
+      - name: Prepare APK Artifacts
         run: |
-          VERSION_TAG="${GITHUB_REF_NAME:-latest}"
-          cp android/app/build/outputs/apk/release/app-release.apk "android/app/build/outputs/apk/release/stoodify-${VERSION_TAG}.apk"
+          TAG="${{ github.event.inputs.release_tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="${GITHUB_REF_NAME:-manual}"
+          fi
+          cp android/app/build/outputs/apk/release/app-release.apk "android/app/build/outputs/apk/release/stoodify-${TAG}.apk"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Stoodify-${{ github.ref_name }}-APK
+          name: Stoodify-Manual-Build-APK
           path: android/app/build/outputs/apk/release/app-release.apk
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release (If Tag Provided)
+        if: github.event.inputs.release_tag != ''
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Stoodify Mobile ${{ github.ref_name }} (APK)
+          tag_name: ${{ github.event.inputs.release_tag }}
+          name: Stoodify Mobile ${{ github.event.inputs.release_tag }} (APK)
           body: |
-            ## 📱 Stoodify Mobile Release ${{ github.ref_name }}
+            ## 📱 Stoodify Mobile Release ${{ github.event.inputs.release_tag }}
 
             File installer resmi aplikasi Stoodify (APK) untuk perangkat Android.
-
-            ### 📦 Informasi Rilis
-            - **Versi Tag:** `${{ github.ref_name }}`
-            - **Commit SHA:** `${{ github.sha }}`
-            - **Target Arsitektur:** Android ARM64 (`arm64-v8a`) & Universal
+            - **Versi Tag:** `${{ github.event.inputs.release_tag }}`
+            - **Target Arsitektur:** Android ARM64 (`arm64-v8a`)
+            - **Ukuran:** Ramping (~9.9 MB)
             - **Aplikasi:** 100% Offline-First Embedded Bundle
-
-            ### 📥 Cara Pasang di HP Android
-            1. Unduh berkas `stoodify-${{ github.ref_name }}.apk` di bagian *Assets* di bawah.
-            2. Buka file APK yang telah diunduh di perangkat Android Anda.
-            3. Jika muncul dialog perizinan *Install from unknown sources*, pilih **Izinkan** / **Allow**.
-            4. Buka aplikasi **Stoodify** dan selamat belajar!
           files: |
-            android/app/build/outputs/apk/release/stoodify-${{ github.ref_name }}.apk
+            android/app/build/outputs/apk/release/stoodify-${{ github.event.inputs.release_tag }}.apk
             android/app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

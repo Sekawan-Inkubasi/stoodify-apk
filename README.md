@@ -111,30 +111,37 @@ Agar nomor versi pada file APK yang dihasilkan tidak tertahan di `1.0.0` dan pen
 
 ---
 
-## 🏷️ Otomatisasi Release APK via GitHub Actions (Git Tag)
+## 🏷️ Panduan Rilis Manual ke GitHub Releases
 
-Selain mem-build secara lokal, repositori ini telah dikonfigurasi dengan **GitHub Actions** untuk mem-build APK secara otomatis di cloud dan langsung mempublikasikannya ke tab **GitHub Releases** setiap kali Anda membuat Git Tag baru:
+Untuk menjaga ukuran file APK tetap ramping (~9.9 MB) dan menghindari pemborosan kuota build cloud, publikasi rilis dilakukan secara manual via web GitHub:
 
-### Alur Rilis Versi Baru:
+### Langkah 1: Build APK Rilis di Laptop
 ```bash
-# 1. Ubah "version" dan naikkan "versionCode" di app.json (misal version: "1.1.0", versionCode: 2)
-# 2. Commit dan push ke main
-git add app.json
-git commit -m "chore(release): bump version to 1.1.0"
-git push origin main
+# 1. Pastikan nomor version dan versionCode di app.json sudah sesuai
+# 2. Jalankan build otomatis (sinkronisasi web + kompilasi APK)
+npm run build:apk
+```
+File APK rilis (~9.9 MB) akan selesai dibuat di:
+`android/app/build/outputs/apk/release/app-release.apk`
 
-# 3. Buat git tag rilis sesuai versi
+*(Beri nama file yang rapi sebelum diunggah, misalnya `stoodify-v1.1.0.apk`).*
+
+### Langkah 2: Buat Tag & Publikasikan di GitHub
+```bash
+# Buat git tag versi (opsional via terminal)
 git tag v1.1.0
-
-# 4. Push tag ke GitHub
 git push origin v1.1.0
 ```
 
-### Apa yang Terjadi di GitHub:
-1. GitHub Actions runner akan otomatis mendeteksi tag `v*` dan menjalankan workflow `.github/workflows/build-apk.yml`.
-2. Cloud runner mengompilasi APK release Android mandiri (~9.9 MB) lengkap dengan aset web offline.
-3. Otomatis membuat entri **GitHub Release** baru dengan nama `Stoodify Mobile v1.1.0 (APK)`.
-4. Melampirkan file APK `stoodify-v1.1.0.apk` yang dapat langsung diunduh oleh publik / tim penguji.
+1. Buka browser ke repositori GitHub: `https://github.com/Sekawan-Inkubasi/stoodify-apk`.
+2. Di sebelah kanan, klik **Releases** ➔ klik tombol **Draft a new release**.
+3. **Pilih Tag:** Pilih tag yang baru saja di-push (misal `v1.1.0`).
+4. **Judul Rilis:** Tulis judul, contoh `Stoodify Mobile v1.1.0`.
+5. **Lampirkan File:** *Drag and drop* file `stoodify-v1.1.0.apk` (~9.9 MB) ke kotak attachment.
+6. Tulis catatan rilis singkat (fitur baru atau perbaikan), lalu klik **Publish release**!
+
+> [!NOTE]
+> File `.github/workflows/build-apk.yml` tetap disediakan sebagai backup tombol manual (*workflow_dispatch*) di tab Actions jika sewaktu-waktu Anda perlu build darurat di cloud.
 
 ---
 
