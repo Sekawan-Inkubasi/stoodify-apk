@@ -11,8 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import { APP_URL } from './src/constants/config';
-import { StoodifyProvider } from './src/context/StoodifyContext';
+import { APP_URL, REMOTE_WEB_URL, LOCAL_ASSET_URL } from './src/constants/config';
 
 function StoodifyWebView() {
   const insets = useSafeAreaInsets();
@@ -20,8 +19,9 @@ function StoodifyWebView() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState(APP_URL);
 
-  // Handle Android hardware back button
+  // Handle hardware back button on Android
   useEffect(() => {
     if (Platform.OS !== 'android') return;
 
@@ -45,6 +45,12 @@ function StoodifyWebView() {
     }
   }, []);
 
+  const handleFallbackToRemote = useCallback(() => {
+    setHasError(false);
+    setIsLoading(true);
+    setCurrentUrl(REMOTE_WEB_URL);
+  }, []);
+
   return (
     <View
       style={[
@@ -61,7 +67,7 @@ function StoodifyWebView() {
       <View style={styles.container}>
         <WebView
           ref={webViewRef}
-          source={{ uri: APP_URL }}
+          source={{ uri: currentUrl }}
           style={styles.webView}
           javaScriptEnabled={true}
           domStorageEnabled={true}
@@ -73,6 +79,9 @@ function StoodifyWebView() {
           cacheEnabled={true}
           allowsBackForwardNavigationGestures={true}
           originWhitelist={['*']}
+          allowFileAccess={true}
+          allowFileAccessFromFileURLs={true}
+          allowUniversalAccessFromFileURLs={true}
           overScrollMode="never"
           bounces={false}
           androidCameraPermissionOptions={{
@@ -111,14 +120,24 @@ function StoodifyWebView() {
             <Text style={styles.errorIcon}>📡</Text>
             <Text style={styles.errorTitle}>Koneksi Terputus</Text>
             <Text style={styles.errorMessage}>
-              Tidak dapat terhubung ke server Stoodify. Pastikan kuota atau koneksi internet perangkat aktif.
+              Tidak dapat memuat aplikasi Stoodify. Periksa koneksi internet Anda atau coba lagi.
             </Text>
-            <Pressable
-              style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
-              onPress={handleRetry}
-            >
-              <Text style={styles.retryButtonText}>Coba Lagi</Text>
-            </Pressable>
+            <View style={styles.errorActionRow}>
+              <Pressable
+                style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+                onPress={handleRetry}
+              >
+                <Text style={styles.retryButtonText}>Coba Lagi</Text>
+              </Pressable>
+              {currentUrl !== REMOTE_WEB_URL && (
+                <Pressable
+                  style={({ pressed }) => [styles.fallbackButton, pressed && styles.retryButtonPressed]}
+                  onPress={handleFallbackToRemote}
+                >
+                  <Text style={styles.fallbackButtonText}>Buka Server Web</Text>
+                </Pressable>
+              )}
+            </View>
           </View>
         )}
       </View>
@@ -129,9 +148,7 @@ function StoodifyWebView() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StoodifyProvider>
-        <StoodifyWebView />
-      </StoodifyProvider>
+      <StoodifyWebView />
     </SafeAreaProvider>
   );
 }
@@ -203,10 +220,14 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 24,
   },
+  errorActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   retryButton: {
     backgroundColor: '#0066FF',
     paddingVertical: 13,
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
     borderRadius: 14,
     elevation: 3,
     shadowColor: '#0066FF',
@@ -214,12 +235,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
   },
+  fallbackButton: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
   retryButtonPressed: {
     opacity: 0.8,
   },
   retryButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  fallbackButtonText: {
+    color: '#334155',
+    fontSize: 14,
     fontWeight: '600',
   },
 });
