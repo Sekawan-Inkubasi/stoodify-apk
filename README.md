@@ -33,12 +33,121 @@ npx expo start
 
 ---
 
-## 📦 Cara Build File APK (Android)
+## 📦 Panduan Build File APK (Android)
 
-Tersedia konfigurasi `eas.json` untuk membuat file APK siap instal (*standalone APK*):
+Terdapat 2 metode untuk mem-build APK Stoodify:
+1. **Build Lokal via Gradle Wrapper (`gradlew`)** — **Direkomendasikan**: Cepat, offline, dan menghasilkan file APK ramping (~9.7 MB).
+2. **Build Cloud via EAS** — Jika tidak memiliki Android SDK lokal.
 
-### Opsi A: Build APK via EAS (Cloud / Direkomendasikan)
-1. Install EAS CLI jika belum ada:
+---
+
+### 🛠️ Metode 1: Build Lokal Ramping via Gradle (Rekomendasi)
+
+Secara default, React Native New Architecture menghasilkan *FAT APK* (>100 MB) karena menggabungkan 4 arsitektur C++ (`armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`) dan library tanpa kompresi. Proyek ini telah dioptimalkan agar menghasilkan APK target modern (**`arm64-v8a`**) dengan ukuran hanya **~9–10 MB**.
+
+#### 1. Persiapan & Prasyarat
+Pastikan sistem Anda sudah terinstal:
+- **Node.js**: v18 atau lebih baru.
+- **JDK (Java Development Kit)**: JDK 17 (disarankan Azul Zulu JDK 17 atau OpenJDK 17).
+- **Android SDK & Build-tools**: Terpasang via Android Studio.
+- **Environment Variables**:
+  - `ANDROID_HOME` mengarah ke folder SDK Anda (misal `C:\Users\<User>\AppData\Local\Android\Sdk` di Windows, atau `/home/<user>/Android/Sdk` di Linux).
+  - `JAVA_HOME` mengarah ke direktori instalasi JDK 17.
+
+Pastikan dependensi JavaScript sudah terpasang:
+```bash
+npm install
+```
+
+> [!NOTE]
+> Proyek ini menggunakan arsitektur **Expo CNG (Continuous Native Generation)** di mana folder `android/` di-generate secara otomatis dan di-ignore dari Git.
+
+---
+
+#### 2. Langkah-Langkah Eksekusi Build
+
+##### Langkah A: Generate Folder Native Android (Jika belum ada)
+Jika folder `android/` belum ada di repositori Anda, generate terlebih dahulu dengan perintah:
+```bash
+npx expo prebuild -p android
+```
+
+##### Langkah B: Konfigurasi Optimasi Ukuran APK
+Buka file `android/gradle.properties` dan sesuaikan baris konfigurasi berikut:
+```properties
+# Ganti dari 4 arsitektur menjadi arm64-v8a saja
+reactNativeArchitectures=arm64-v8a
+
+# Aktifkan kompresi library native agar ukuran file APK menyusut
+expo.useLegacyPackaging=true
+
+# Aktifkan pembersihan resource yang tidak terpakai
+android.enableShrinkResourcesInReleaseBuilds=true
+```
+
+##### Langkah C: Jalankan Build Release APK
+
+* **Untuk Pengguna Linux / macOS:**
+  1. Beri izin eksekusi skrip Gradle (wajib dilakukan pertama kali setelah prebuild):
+     ```bash
+     chmod +x android/gradlew
+     ```
+  2. Masuk ke direktori `android` dan jalankan build Release:
+     ```bash
+     cd android && ./gradlew assembleRelease
+     ```
+
+* **Untuk Pengguna Windows:**
+  1. Masuk ke direktori `android`:
+     ```powershell
+     cd android
+     ```
+  2. Jalankan build Release:
+     * Di **PowerShell**:
+       ```powershell
+       .\gradlew.bat assembleRelease
+       ```
+     * Di **Command Prompt (CMD)**:
+       ```cmd
+       gradlew.bat assembleRelease
+       ```
+     * Di **Git Bash**:
+       ```bash
+       ./gradlew assembleRelease
+       ```
+
+---
+
+#### 3. Lokasi File Output
+Setelah proses build selesai (`BUILD SUCCESSFUL`), file APK siap pakai berada di:
+```
+android/app/build/outputs/apk/release/app-release.apk
+```
+* **Ukuran APK:** Turun drastis ke **~20–30 MB** (bahkan **~9.7 MB** dengan optimasi aktif).
+* **Install via ADB ke perangkat (opsional):**
+  ```bash
+  adb install android/app/build/outputs/apk/release/app-release.apk
+  ```
+
+---
+
+#### 4. Troubleshooting & Problem Solving
+
+| Kendala / Error | Penyebab | Solusi |
+| :--- | :--- | :--- |
+| **`zsh: permission denied: ./gradlew`** | Skrip `gradlew` di Linux/macOS belum memiliki izin eksekusi (`+x`). | Jalankan `chmod +x android/gradlew` lalu ulangi build. |
+| **`SDK location not found`** | Gradle tidak menemukan lokasi Android SDK. | Buat file `android/local.properties` dan isi lokasinya:<br>• **Linux**: `sdk.dir=/home/<username>/Android/Sdk`<br>• **Windows**: `sdk.dir=C\:\\Users\\<username>\\AppData\\Local\\Android\\Sdk` |
+| **`JAVA_HOME is not set` / Java version error** | Versi JDK tidak kompatibel atau environment variable belum disetel. | Pastikan menggunakan **JDK 17**. Cek dengan `java -version`. Di Windows/Linux set `JAVA_HOME` ke folder JDK 17 Anda. |
+| **Ukuran APK melonjak > 100 MB** | Build menyertakan semua arsitektur atau kompresi belum aktif. | Cek file `android/gradle.properties`, pastikan `reactNativeArchitectures=arm64-v8a` dan `expo.useLegacyPackaging=true`. |
+| **Build macet / Out of Memory / Daemon error** | Cache Gradle korup atau memori daemon kurang. | Jalankan pembersihan cache:<br>Linux: `cd android && ./gradlew clean`<br>Windows: `cd android && .\gradlew.bat clean` |
+
+---
+
+### ☁️ Metode 2: Build APK via EAS (Cloud / Alternatif)
+
+Gunakan metode ini jika komputer developer tidak memiliki Android Studio atau spesifikasi terbatas:
+
+1. Install EAS CLI:
    ```bash
    npm install -g eas-cli
    ```
@@ -46,16 +155,11 @@ Tersedia konfigurasi `eas.json` untuk membuat file APK siap instal (*standalone 
    ```bash
    eas login
    ```
-3. Jalankan build APK:
+3. Jalankan build cloud:
    ```bash
    npx eas build -p android --profile preview
    ```
-4. Setelah proses build selesai di cloud Expo, Anda akan mendapatkan tautan unduhan langsung untuk file `.apk`.
-
-### Opsi B: Build Lokal (Menggunakan Android Studio / SDK)
-```bash
-npx expo run:android --variant release
-```
+4. Unduh file APK dari dashboard Expo setelah selesai.
 
 ---
 
