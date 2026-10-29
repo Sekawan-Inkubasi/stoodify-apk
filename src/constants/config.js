@@ -22,11 +22,8 @@ const LOCAL_DEFAULT_API = 'http://localhost:8080/api';
 const PRODUCTION_API = 'https://stoodify.kradev.my.id/api';
 
 function resolveDefaultApiUrl() {
-  if (__DEV__) {
-    if (Platform.OS === 'android') {
-      return LOCAL_ANDROID_EMULATOR_API;
-    }
-    return LOCAL_DEFAULT_API;
+  if (process.env.EXPO_PUBLIC_API_URL || process.env.BASE_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL || process.env.BASE_API_URL;
   }
   return PRODUCTION_API;
 }
