@@ -1,153 +1,76 @@
-# Stoodify Mobile Application (Android Shell Container)
+# Stoodify Android — React Native
 
-Aplikasi mobile resmi **Stoodify** — Asisten Belajar Pintar berbasis AI untuk Siswa SMA/SMK sederajat. Repositori ini berfungsi sebagai **Native Android Container (Shell APK)** yang membungkus antarmuka web dari `stoodify-mobile` menggunakan **React Native** dan **`react-native-webview`**, menyediakan file binary APK Android mandiri yang dapat berjalan **100% offline**, menangani hardware Android (Kamera, Tombol Kembali fisik, Safe Area notch), dan menampilkan icon resmi Stoodify di home screen.
+Repositori ini berisi aplikasi Android Stoodify dengan antarmuka React Native/Expo. UI, navigasi, state aplikasi, kamera, dan pemilih file berjalan secara native. `stoodify-mobile` menjadi referensi desain dan perilaku; build APK tidak membangun atau menyalin kode dari workspace tersebut.
 
----
-
-## 🏗️ Arsitektur & Aturan Struktur Folder
-
-Agar fitur build otomatis dan sinkronisasi aset web berjalan lancar, folder **`stoodify-mobile`** dan **`stoodify-apk`** **WAJIB diletakkan bersebelahan (sibling directories)** di dalam folder induk yang sama:
+## Arsitektur
 
 ```text
-my-projects/
-├── stoodify-mobile/   <-- [KODING DI SINI] Source Code Frontend (React 19, Tailwind, API Client)
-├── stoodify-apk/      <-- [BUILD DI SINI] Native Android Shell & Generator APK
-└── stoodify-backend/  <-- Backend REST API (Golang Gin, PostgreSQL)
+stoodify-apk (React Native / Expo)
+       ├── REST API ──> stoodify-backend ──> database
+       │                         └────────> stoodify-ai-1
+       └── WebView darurat (dibuka manual) ──> stoodify-mobile hosted
 ```
 
-> [!IMPORTANT]
-> - **Koding Frontend:** Seluruh perubahan tampilan, warna, teks, animasi, modal, dan pemanggilan API backend dikerjakan di folder **`stoodify-mobile`**.
-> - **Build APK:** Folder **`stoodify-apk`** hanya digunakan saat mem-build file APK Android atau mengatur konfigurasi native. Skrip `npm run build:apk` akan otomatis memanggil `cd ../stoodify-mobile && npm run build` untuk mengambil bundel web terbaru.
+Token akses dan refresh disimpan menggunakan Expo SecureStore. API client native mengirim token Bearer, menangani refresh token, timeout, dan multipart upload avatar. Prediksi serta rekomendasi AI tetap melewati backend.
 
----
+WebView dipertahankan hanya sebagai fallback yang dibuka dari **Profil → Buka Versi Web Darurat** atau layar pemulihan saat UI native gagal. Fallback membutuhkan koneksi internet.
 
-## 📱 Fitur Container Mobile
+## Menjalankan aplikasi
 
-- **100% Offline-First:** Aset web hasil kompilasi ditanam langsung di dalam aset native APK (`android/app/src/main/assets/web/`), sehingga aplikasi dapat dibuka seketika dalam 0 detik tanpa kuota internet.
-- **Launcher Icon Resmi Stoodify:** Icon aplikasi di launcher Android menggunakan logo resmi Stoodify warna biru (`#0062FF`) dengan proporsi safe-zone padding (~47% canvas) dan latar belakang putih bersih (`#FFFFFF`).
-- **Hardware Back Button Handling:** Tombol kembali fisik Android bernavigasi mundur pada riwayat web dan tidak langsung menutup aplikasi secara tidak sengaja.
-- **Safe Area & Notch Handling:** Status bar dan navigasi bawah otomatis menyesuaikan poni layar perangkat secara presisi melalui `react-native-safe-area-context`.
-- **Dukungan Kamera:** Menangani dialog izin sensor perangkat Android (`CAMERA`, `RECORD_AUDIO`) untuk kebutuhan pemindaian soal belajar.
-- **Fallback & Reconnect Screen:** Menampilkan layar error yang ramah pengguna jika terjadi gangguan sistem.
+Persyaratan: Node.js, JDK 17, Android SDK, dan perangkat/emulator Android.
 
----
-
-## 🚀 Panduan Pengembangan & Command
-
-### 1. Prasyarat Sistem
-- **Node.js**: v18 atau lebih baru (direkomendasikan v20+).
-- **JDK (Java Development Kit)**: JDK 17 (disarankan Azul Zulu JDK 17 atau OpenJDK 17).
-- **Android SDK & Build-tools**: Terpasang via Android Studio dengan variable `ANDROID_HOME`.
-- Folder `stoodify-mobile` sudah terpasang dependensinya (`npm install` di `stoodify-mobile`).
-
-### 2. Daftar Perintah `stoodify-apk`
-
-| Perintah | Deskripsi |
-| :--- | :--- |
-| **`npm run build:apk`** | **[UTAMA]** Menjalankan build web di `stoodify-mobile`, menyalin hasilnya ke aset Android, lalu mem-build release APK (`app-release.apk`, ~9.9 MB). |
-| **`npm run sync-web`** | Mengompilasi `stoodify-mobile` dan menyalin bundel `dist/` ke aset lokal APK tanpa memicu build Gradle. |
-| **`npm run start:go`** | Menjalankan Metro Bundler khusus untuk pengujian via aplikasi **Expo Go** di HP. |
-| **`npm run start`** | Menjalankan Metro Bundler default Expo. |
-| **`npm run android`** | Menjalankan aplikasi langsung ke emulator atau perangkat yang terhubung via ADB. |
-
----
-
-## 📦 Panduan Build File APK (Release)
-
-Untuk menghasilkan file APK mandiri yang siap diinstal ke smartphone siswa:
-
-### Langkah 1: Pastikan Dependensi Terpasang
 ```bash
-# Di folder stoodify-apk
 npm install
+npm start
 ```
 
-### Langkah 2: Jalankan Build APK Otomatis
+Konfigurasi base URL backend melalui `EXPO_PUBLIC_API_URL`. Contoh:
+
+- Perangkat Android fisik: alamat IP LAN komputer host, misalnya `http://192.168.1.10:8080/api`.
+- Perangkat fisik dengan ADB reverse: jalankan `adb reverse tcp:8080 tcp:8080`, lalu gunakan `http://localhost:8080/api`.
+- Emulator Android: gunakan `http://10.0.2.2:8080/api`.
+- Produksi: gunakan URL HTTPS backend.
+
+Alamat HTTP lokal hanya mengaktifkan cleartext traffic pada konfigurasi native ketika `EXPO_PUBLIC_API_URL` memakai `http://`. Jangan memasukkan API key atau secret ke variabel `EXPO_PUBLIC_*`.
+
+## Build APK
+
 ```bash
 npm run build:apk
 ```
 
-Perintah di atas akan mengeksekusi:
-1. `cd ../stoodify-mobile && npm run build` (Menghasilkan aset web terbaru).
-2. Menyalin folder `dist/*` ke `android/app/src/main/assets/web/`.
-3. Menjalankan `./gradlew assembleRelease` dengan arsitektur target `arm64-v8a` dan optimasi kompresi.
+Perintah ini menjalankan Expo prebuild untuk Android dan Gradle `assembleRelease`. Build tidak memanggil `stoodify-mobile`; aset WebView fallback hosted dimuat saat pengguna memilih fallback.
 
-### Langkah 3: Lokasi File APK & Cara Pemasangan
-File APK release yang dihasilkan berada di:
-```text
-android/app/build/outputs/apk/release/app-release.apk
+APK tersedia di `android/app/build/outputs/apk/release/app-release.apk`.
+
+## Fitur native
+
+- Login dan registrasi, sesi tersimpan aman, refresh token, dan logout.
+- Beranda, daftar tugas, kalender, Rencana AI, profil, notifikasi, serta manajemen mata pelajaran.
+- Tambah tugas dan jadwal, progres tugas, rekomendasi/reschedule, prediksi materi, umpan balik AI, dan preferensi belajar melalui endpoint backend yang tersedia.
+- Timer fokus, pemotretan tugas, pemilihan gambar/dokumen, dan unggah foto profil.
+- Navigasi tab, safe area, keyboard, tombol Back Android, loading, state kosong, dan state error.
+
+Lampiran tugas saat ini hanya menjadi pratinjau lokal, sesuai kontrak frontend yang tersedia; belum ditemukan endpoint backend untuk menyimpan lampiran tugas. Asisten percakapan masih memakai respons lokal yang disediakan frontend karena endpoint chat belum tersedia. Pembayaran Pro juga belum terhubung dan tidak mengubah status akun.
+
+## Struktur source
+
+- `App.js`: entry UI, tab, modal global, dan tombol Back Android.
+- `src/screens/`: layar utama per tab dan autentikasi.
+- `src/components/`: navigasi, modal, fallback WebView, dan komponen native bersama.
+- `src/services/`: HTTP client, SecureStore, adapter model, dan layanan domain.
+- `src/constants/`: endpoint, konfigurasi API, dan token desain.
+
+Ikuti `AGENTS.md` untuk standar file (maksimal 300 baris), izin Android, dan alur verifikasi.
+
 ```
-*(Ukuran berkas hanya ~9.9 MB)*
+Penyebabnya, build development di HP belum tersambung ke Metro. Di layar Development Build, isi kolom URL dengan:
 
-Pasang langsung ke smartphone Android via USB Debugging:
-```bash
-adb install -r android/app/build/outputs/apk/release/app-release.apk
+http://localhost:8081
+
+lalu tekan Connect. Saya melakukan koneksi itu pada perangkat Anda. Setelah indikator bundling selesai, tutup panel developer dengan tombol ×. Layar pembuka yang muncul adalah halaman awal aplikasi.
+
+Saat memakai USB, Metro perlu tetap berjalan di komputer dan port-nya diteruskan ke HP. Di perangkat Anda, adb reverse untuk port 8081 dan 8080 sudah aktif. Jika Metro berhenti, jalankan kembali dari folder stoodify-apk:
+
+EXPO_PUBLIC_API_URL=http://localhost:8080/api npx expo start --dev-client --localhost --port 8081
 ```
-
----
-
-## 🔢 Panduan Mengubah Versi Aplikasi (Versioning & versionCode)
-
-Agar nomor versi pada file APK yang dihasilkan tidak tertahan di `1.0.0` dan pengguna dapat memperbarui (*update*) aplikasi di HP Android tanpa error penolakan versi, ubah dua properti di file **`app.json`**:
-
-```json
-{
-  "expo": {
-    "version": "1.1.0",           // <-- [1] Teks versi yang dilihat pengguna (versionName)
-    "android": {
-      "versionCode": 2,          // <-- [2] Angka integer OS Android (WAJIB NAIK +1 setiap rilis)
-      ...
-    }
-  }
-}
-```
-
-| Properti di `app.json` | Contoh Nilai | Aturan & Fungsi |
-| :--- | :---: | :--- |
-| **`expo.version`** | `"1.1.0"`, `"1.2.0"` | String versi yang tampil di menu *Info Aplikasi* di pengaturan HP Android dan di GitHub Releases. |
-| **`android.versionCode`** | `1`, `2`, `3`, dst. | Angka bulat positif yang dibaca oleh sistem OS Android. **Wajib selalu ditambah +1 setiap kali rilis baru**, karena Android akan menolak instalasi update jika `versionCode` baru lebih kecil atau sama dengan versi yang sudah terpasang di HP. |
-
-*(Saat skrip `npm run build:apk` atau GitHub Actions berjalan, Expo CNG otomatis membaca kedua nilai ini dan menginjeksinya ke dalam `android/app/build.gradle`).*
-
----
-
-## 🏷️ Panduan Rilis Manual ke GitHub Releases
-
-Untuk menjaga ukuran file APK tetap ramping (~9.9 MB) dan menghindari pemborosan kuota build cloud, publikasi rilis dilakukan secara manual via web GitHub:
-
-### Langkah 1: Build APK Rilis di Laptop
-```bash
-# 1. Pastikan nomor version dan versionCode di app.json sudah sesuai
-# 2. Jalankan build otomatis (sinkronisasi web + kompilasi APK)
-npm run build:apk
-```
-File APK rilis (~9.9 MB) akan selesai dibuat di:
-`android/app/build/outputs/apk/release/app-release.apk`
-
-*(Beri nama file yang rapi sebelum diunggah, misalnya `stoodify-v1.1.0.apk`).*
-
-### Langkah 2: Buat Tag & Publikasikan di GitHub
-```bash
-# Buat git tag versi (opsional via terminal)
-git tag v1.1.0
-git push origin v1.1.0
-```
-
-1. Buka browser ke repositori GitHub: `https://github.com/Sekawan-Inkubasi/stoodify-apk`.
-2. Di sebelah kanan, klik **Releases** ➔ klik tombol **Draft a new release**.
-3. **Pilih Tag:** Pilih tag yang baru saja di-push (misal `v1.1.0`).
-4. **Judul Rilis:** Tulis judul, contoh `Stoodify Mobile v1.1.0`.
-5. **Lampirkan File:** *Drag and drop* file `stoodify-v1.1.0.apk` (~9.9 MB) ke kotak attachment.
-6. Tulis catatan rilis singkat (fitur baru atau perbaikan), lalu klik **Publish release**!
-
-> [!NOTE]
-> File `.github/workflows/build-apk.yml` tetap disediakan sebagai backup tombol manual (*workflow_dispatch*) di tab Actions jika sewaktu-waktu Anda perlu build darurat di cloud.
-
----
-
-## 🔧 Konfigurasi Tambahan (`src/constants/config.js`)
-
-Jika Anda ingin menguji perubahan UI secara langsung di HP tanpa build APK ulang (Live HMR):
-1. Jalankan `npm run dev -- --host` di folder `stoodify-mobile` (catat IP lokal, misal `http://192.168.1.4:5173`).
-2. Set variabel `EXPO_PUBLIC_APP_URL=http://192.168.1.4:5173` atau ubah `DEFAULT_APP_URL` di `src/constants/config.js`.
-3. Jalankan `npm run start:go` di `stoodify-apk`, lalu scan QR code menggunakan Expo Go di HP Anda.

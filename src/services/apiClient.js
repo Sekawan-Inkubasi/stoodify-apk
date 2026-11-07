@@ -62,8 +62,9 @@ export async function request(endpoint, options = {}) {
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const token = getAccessToken();
+  const isMultipart = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
     Accept: 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
@@ -84,8 +85,8 @@ export async function request(endpoint, options = {}) {
         isRefreshing = true;
         const newAccessToken = await performTokenRefresh();
         isRefreshing = false;
+        onRefreshed(newAccessToken);
         if (newAccessToken) {
-          onRefreshed(newAccessToken);
           return request(endpoint, {
             ...options,
             _retry: true,
@@ -158,7 +159,7 @@ export const apiPost = (endpoint, body = {}, options = {}) =>
   request(endpoint, {
     ...options,
     method: 'POST',
-    body: typeof body === 'string' ? body : JSON.stringify(body),
+    body: typeof body === 'string' || (typeof FormData !== 'undefined' && body instanceof FormData) ? body : JSON.stringify(body),
   });
 
 export const apiPut = (endpoint, body = {}, options = {}) =>

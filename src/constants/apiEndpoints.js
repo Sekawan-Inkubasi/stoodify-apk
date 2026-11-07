@@ -14,6 +14,7 @@ export const ENDPOINTS = {
   // Users & Preferences
   USER_ME: '/users/me',
   USER_PREFERENCES: '/users/me/preferences',
+  USER_AVATAR: '/users/avatar',
 
   // Subjects
   SUBJECTS: '/subjects/',

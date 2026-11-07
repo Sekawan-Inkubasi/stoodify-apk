@@ -65,6 +65,13 @@ export async function updatePreferences(preferences) {
   return apiPatch(ENDPOINTS.USER_PREFERENCES, preferences);
 }
 
+export async function uploadAvatar(uri, name = 'avatar.jpg', type = 'image/jpeg') {
+  const body = new FormData();
+  body.append('avatar', { uri, name, type });
+  const result = await apiPost(ENDPOINTS.USER_AVATAR, body);
+  return result?.data?.avatar_url || result?.avatar_url || null;
+}
+
 /**
  * Autentikasi Demo Persisten
  * Menghubungkan siswa demo ke akun nyata di database PostgreSQL backend.
@@ -95,5 +102,6 @@ export default {
   updateMe,
   getPreferences,
   updatePreferences,
+  uploadAvatar,
   loginDemo,
 };

@@ -21,17 +21,18 @@ Panduan teknis dan operasional untuk seluruh AI Agent yang bekerja pada reposito
 Agent wajib membedakan secara tegas antara **fakta yang telah terbukti di kode aktif** dan **rencana roadmap dokumen**:
 
 ### A. Fakta Aktif Codebase (Verified)
-- **Framework:** React Native `0.88.0` dengan Expo SDK `~58.0.21`, React `19.3.0`.
-- **Bentuk Arsitektur Saat Ini:** Hybrid WebView Container (`App.js`) membungkus web production `https://stoodify-mobile-app.vercel.app` menggunakan `react-native-webview` (`14.0.1`).
+- **Framework:** React Native `0.88.1` dengan Expo SDK `~58.0.23`, React `19.3.0`.
+- **Bentuk Arsitektur Saat Ini:** UI utama React Native dengan lima tab native dan service REST langsung ke backend. `react-native-webview` hanya dipakai sebagai fallback web eksplisit.
 - **Fitur Mobile yang Sudah Aktif:**
-  - Penanganan hardware back button Android (`BackHandler`) untuk riwayat WebView.
-  - Loading state kustom & offline/error state dengan mekanisme reload (*Coba Lagi*).
-  - Dialog izin kamera & mic (`CAMERA`, `RECORD_AUDIO`) untuk pemindaian soal belajar.
-  - Styling dasar menggunakan `StyleSheet.create` native.
+  - Login/registrasi native, token di Expo SecureStore, refresh token, dan logout.
+  - Layar Beranda, Tugas, Kalender, Rencana AI, Profil, drawer asisten, dan modal native.
+  - Kamera native (`expo-camera`), pemilih gambar/dokumen, dan unggah avatar.
+  - Penanganan safe area dan hardware back button Android.
 - **Native Generation & Build System:**
   - Menggunakan Expo Continuous Native Generation (CNG) via `npx expo prebuild -p android`.
   - Folder `android/` diabaikan dari git (`.gitignore`).
-  - Optimasi APK Gradle: Target arsitektur `arm64-v8a` dengan `useLegacyPackaging` dan resource shrinking untuk ukuran release ~9.7 MB.
+  - Optimasi APK Gradle: Target arsitektur `arm64-v8a` dengan `useLegacyPackaging` dan resource shrinking.
+  - `npm run build:apk` menjalankan CNG dan Gradle; tidak membangun atau menyalin workspace `stoodify-mobile`.
   - CI Pipeline: GitHub Actions (`.github/workflows/build-apk.yml`) otomatis build APK via JDK 17 dan Gradle `assembleRelease`.
 
 ### B. Roadmap Masa Depan (Rencana Dokumen `MobileDev_Stoodify.pdf`)
@@ -103,7 +104,7 @@ Setiap pengerjaan task wajib melalui lima fase berikut secara teratur:
    - Jika task berskala besar (>2 file atau perubahan arsitektur), buat checkpoint dan jelaskan scope kerja sebelum mengeksekusi.
 3. **Phase 3: Implementasi**
    - Terapkan perubahan kode secara terfokus dan patuhi batasan <= 300 baris per file.
-   - Jaga backward compatibility dan jangan merusak penanganan WebView atau tombol kembali fisik yang sudah stabil.
+   - Jaga fallback WebView eksplisit, autentikasi native, dan tombol kembali fisik.
 4. **Phase 4: Testing & Verifikasi**
    - Jalankan uji validasi sintaks, build check, atau validasi konfigurasi Expo (`npx expo doctor` jika relevan).
    - Pastikan alur error/loading dan back-button navigation tetap bekerja.

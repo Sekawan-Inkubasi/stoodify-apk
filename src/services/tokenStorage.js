@@ -1,135 +1,63 @@
-/**
- * Token Storage Manager untuk Stoodify Mobile
- * Bebas dependensi eksternal, kompatibel dengan React Native & Expo runtime.
- */
+import * as SecureStore from 'expo-secure-store';
 
-let memoryTokens = {
-  accessToken: null,
-  refreshToken: null,
-  user: null,
+const KEYS = {
+  access: 'stoodify_access_token',
+  refresh: 'stoodify_refresh_token',
+  user: 'stoodify_user',
 };
 
+let memoryTokens = { accessToken: null, refreshToken: null, user: null };
 const listeners = new Set();
 
 function notifyListeners() {
-  listeners.forEach((listener) => {
-    try {
-      listener(memoryTokens);
-    } catch {
-      // Ignored
-    }
-  });
+  listeners.forEach((listener) => listener(memoryTokens));
 }
 
-export function setTokens({ accessToken, refreshToken, user = null }) {
+export async function hydrateTokens() {
+  try {
+    const [accessToken, refreshToken, storedUser] = await Promise.all([
+      SecureStore.getItemAsync(KEYS.access),
+      SecureStore.getItemAsync(KEYS.refresh),
+      SecureStore.getItemAsync(KEYS.user),
+    ]);
+    memoryTokens = {
+      accessToken,
+      refreshToken,
+      user: storedUser ? JSON.parse(storedUser) : null,
+    };
+  } catch {
+    memoryTokens = { accessToken: null, refreshToken: null, user: null };
+  }
+  notifyListeners();
+  return memoryTokens;
+}
+
+export function setTokens({ accessToken, refreshToken, user } = {}) {
   if (accessToken !== undefined) memoryTokens.accessToken = accessToken;
   if (refreshToken !== undefined) memoryTokens.refreshToken = refreshToken;
   if (user !== undefined && user !== null) memoryTokens.user = user;
-
-  // Coba persistensi jika runtime menyediakan localStorage
-  try {
-    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
-      if (memoryTokens.accessToken) {
-        globalThis.localStorage.setItem('stoodify_access_token', memoryTokens.accessToken);
-      }
-      if (memoryTokens.refreshToken) {
-        globalThis.localStorage.setItem('stoodify_refresh_token', memoryTokens.refreshToken);
-      }
-      if (memoryTokens.user) {
-        globalThis.localStorage.setItem('stoodify_user', JSON.stringify(memoryTokens.user));
-      }
-    }
-  } catch {
-    // Persistent storage tidak tersedia di native JS VM tanpa native module
-  }
-
+  const writes = [];
+  if (accessToken !== undefined) writes.push(SecureStore.setItemAsync(KEYS.access, accessToken || ''));
+  if (refreshToken !== undefined) writes.push(SecureStore.setItemAsync(KEYS.refresh, refreshToken || ''));
+  if (user !== undefined && user !== null) writes.push(SecureStore.setItemAsync(KEYS.user, JSON.stringify(user)));
+  Promise.all(writes).catch(() => {});
   notifyListeners();
 }
 
-export function getAccessToken() {
-  if (memoryTokens.accessToken) return memoryTokens.accessToken;
-  try {
-    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
-      const stored = globalThis.localStorage.getItem('stoodify_access_token');
-      if (stored) {
-        memoryTokens.accessToken = stored;
-        return stored;
-      }
-    }
-  } catch {
-    // Ignored
-  }
-  return null;
-}
-
-export function getRefreshToken() {
-  if (memoryTokens.refreshToken) return memoryTokens.refreshToken;
-  try {
-    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
-      const stored = globalThis.localStorage.getItem('stoodify_refresh_token');
-      if (stored) {
-        memoryTokens.refreshToken = stored;
-        return stored;
-      }
-    }
-  } catch {
-    // Ignored
-  }
-  return null;
-}
-
-export function getStoredUser() {
-  if (memoryTokens.user) return memoryTokens.user;
-  try {
-    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
-      const stored = globalThis.localStorage.getItem('stoodify_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        memoryTokens.user = parsed;
-        return parsed;
-      }
-    }
-  } catch {
-    // Ignored
-  }
-  return null;
-}
+export const getAccessToken = () => memoryTokens.accessToken;
+export const getRefreshToken = () => memoryTokens.refreshToken;
+export const getStoredUser = () => memoryTokens.user;
 
 export function clearTokens() {
-  memoryTokens = {
-    accessToken: null,
-    refreshToken: null,
-    user: null,
-  };
-
-  try {
-    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
-      globalThis.localStorage.removeItem('stoodify_access_token');
-      globalThis.localStorage.removeItem('stoodify_refresh_token');
-      globalThis.localStorage.removeItem('stoodify_user');
-    }
-  } catch {
-    // Ignored
-  }
-
+  memoryTokens = { accessToken: null, refreshToken: null, user: null };
+  Promise.all(Object.values(KEYS).map((key) => SecureStore.deleteItemAsync(key))).catch(() => {});
   notifyListeners();
 }
 
-export function hasActiveSession() {
-  return Boolean(getAccessToken());
-}
-
-export function subscribeTokenChange(listener) {
+export const hasActiveSession = () => Boolean(memoryTokens.accessToken);
+export const subscribeTokenChange = (listener) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
-}
-
-export default {
-  setTokens,
-  getAccessToken,
-  getRefreshToken,
-  getStoredUser,
-  clearTokens,
-  hasActiveSession,
-  subscribeTokenChange,
 };
+
+export default { hydrateTokens, setTokens, getAccessToken, getRefreshToken, getStoredUser, clearTokens, hasActiveSession, subscribeTokenChange };

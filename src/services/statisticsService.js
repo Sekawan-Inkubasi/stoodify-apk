@@ -14,6 +14,8 @@ export async function getOverview() {
     totalStudyMinutes: Number(data.total_study_minutes) || 0,
     totalStudyHours: Math.round(((Number(data.total_study_minutes) || 0) / 60) * 10) / 10,
     totalSubjects: Number(data.total_subjects) || 0,
+    streakDays: Number(data.streak_days) || 0,
+    completedTasksThisWeek: Number(data.done_tasks ?? data.completed_tasks) || 0,
   };
 }
 
