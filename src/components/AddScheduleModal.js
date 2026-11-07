@@ -14,7 +14,7 @@ export default function AddScheduleModal({ visible, onClose, subjects, defaultDa
   const [busy, setBusy] = useState(false);
   React.useEffect(() => { if (visible && defaultDay) setDay(defaultDay); }, [visible, defaultDay]);
   const save = async () => {
-    if (!subjectId) return onManageSubjects();
+    if (!subjectId) return subjects.length ? onManageSubjects() : null;
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)) return;
     setBusy(true);
     try { await onSubmit({ subjectId, dayOfWeek: day, startTime, endTime }); onClose(); }

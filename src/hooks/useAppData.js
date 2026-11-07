@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as auth from '../services/authService';
 import * as tasksApi from '../services/taskService';
 import * as subjectsApi from '../services/subjectService';
@@ -13,6 +13,7 @@ import { API_BASE_URL } from '../constants/config';
 const initialUser = { name: 'Siswa', grade: 'SMA - Fase F', school: 'Stoodify', email: '', avatarUrl: null };
 
 export default function useAppData(showMessage) {
+  const recommendationAttempts = useRef(new Set());
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -41,7 +42,21 @@ export default function useAppData(showMessage) {
       const [taskResult, scheduleResult, sessionResult, statsResult, notificationResult, predictionResult] = results;
       if (taskResult.status === 'fulfilled') setTasks(taskResult.value);
       if (scheduleResult.status === 'fulfilled') setSchedules(scheduleResult.value);
-      if (sessionResult.status === 'fulfilled') setSessions(sessionResult.value);
+      if (sessionResult.status === 'fulfilled') {
+        const loadedSessions = sessionResult.value;
+        setSessions(loadedSessions);
+        const activeTasks = taskResult.status === 'fulfilled'
+          ? taskResult.value.filter((task) => task.status !== 'selesai')
+          : [];
+        const attemptKey = activeTasks.map((task) => task.id).sort().join(',');
+        if (!loadedSessions.length && activeTasks.length && !recommendationAttempts.current.has(attemptKey)) {
+          recommendationAttempts.current.add(attemptKey);
+          try {
+            const generated = await sessionsApi.generateScheduleRecommendations();
+            if (generated.sessions.length) setSessions(generated.sessions);
+          } catch { /* Keep the empty state available when recommendations cannot be generated. */ }
+        }
+      }
       if (statsResult.status === 'fulfilled') setStats(statsResult.value);
       if (notificationResult.status === 'fulfilled') setNotifications(notificationResult.value);
       if (predictionResult.status === 'fulfilled') setPredictions(predictionResult.value.filter((item) => item.status === 'fulfilled').flatMap((item) => item.value));

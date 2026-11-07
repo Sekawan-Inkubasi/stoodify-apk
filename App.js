@@ -22,6 +22,7 @@ import EmergencyWebView from './src/components/EmergencyWebView';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { PreferencesModal, ProModal } from './src/components/AccountModals';
 import { AppText } from './src/components/ui';
+import { Sparkles } from 'lucide-react-native';
 import { colors } from './src/constants/theme';
 import useAppData from './src/hooks/useAppData';
 
@@ -94,7 +95,7 @@ function StoodifyApp() {
         {activeTab === 'profile' ? <ProfileScreen {...screenProps} subjectsCount={data.subjects.length} onAvatar={handleAvatar} onManageSubjects={() => setSubjectModalVisible(true)} onHelp={() => showMessage('Untuk bantuan, hubungi tim Stoodify melalui kontak dukungan sekolah.', 'Pusat Bantuan Stoodify')} onPro={() => setProVisible(true)} onLogout={handleLogout} onPreferences={loadPreferences} onWebFallback={() => setWebFallback(true)} /> : null}
       </View>
       <BottomTabs active={activeTab} onChange={setActiveTab} urgentCount={data.tasks.filter((task) => task.status !== 'selesai' && task.priorityScore >= 60).length} bottom={Math.max(14, insets.bottom + 8)} />
-      <Pressable accessibilityLabel="Buka Stoodify AI Assistant" onPress={() => setChatVisible(true)} style={[styles.assistantTab, { bottom: Math.max(115, insets.bottom + 110) }]}><View style={styles.assistantPulse} /><View style={styles.assistantLabel}><AppText style={styles.assistantText}>AI ASSISTANT</AppText></View></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Buka Stoodify AI Assistant" onPress={() => setChatVisible(true)} style={[styles.assistantTab, { bottom: Math.max(88, insets.bottom + 82) }]}><Sparkles size={20} color="#fff" /></Pressable>
     </>}
 
     <AddTaskModal visible={addTaskVisible} onClose={() => setAddTaskVisible(false)} subjects={data.subjects} onSubmit={data.addTask} onManageSubjects={() => setSubjectModalVisible(true)} showMessage={showMessage} />
@@ -115,5 +116,5 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, width: '100%', maxWidth: 448, alignSelf: 'center', backgroundColor: colors.canvas }, content: { flex: 1 }, authWrap: { flex: 1, backgroundColor: '#fff' }, loading: { flex: 1, backgroundColor: colors.canvas }, dataError: { backgroundColor: '#FFF7E8', paddingHorizontal: 14, paddingVertical: 8 }, dataErrorText: { color: '#9A5C00', fontSize: 9, textAlign: 'center' }, assistantTab: { position: 'absolute', right: 0, zIndex: 5 }, assistantPulse: { position: 'absolute', width: 42, height: 42, borderRadius: 22, left: -5, backgroundColor: 'rgba(0,98,255,0.18)' }, assistantLabel: { width: 34, height: 112, borderTopLeftRadius: 17, borderBottomLeftRadius: 17, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', elevation: 5 }, assistantText: { color: '#fff', fontFamily: 'Poppins_700Bold', fontSize: 8, letterSpacing: 1.4, transform: [{ rotate: '-90deg' }], width: 86, textAlign: 'center' },
+  root: { flex: 1, width: '100%', maxWidth: 448, alignSelf: 'center', backgroundColor: colors.canvas }, content: { flex: 1 }, authWrap: { flex: 1, backgroundColor: '#fff' }, loading: { flex: 1, backgroundColor: colors.canvas }, dataError: { backgroundColor: '#FFF7E8', paddingHorizontal: 14, paddingVertical: 8 }, dataErrorText: { color: '#9A5C00', fontSize: 12, textAlign: 'center' }, assistantTab: { position: 'absolute', right: 16, zIndex: 5, width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', elevation: 5, shadowColor: colors.primary, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
 });

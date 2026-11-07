@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Camera, FileText, ImagePlus, Trash2 } from 'lucide-react-native';
 import ModalSheet from './ModalSheet';
 import CameraCaptureModal from './CameraCaptureModal';
@@ -23,6 +24,8 @@ export default function AddTaskModal({ visible, onClose, subjects, onSubmit, onM
   const [attachment, setAttachment] = useState(null);
   const [cameraVisible, setCameraVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const deadlineDate = new Date(`${deadline}T12:00:00`);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
@@ -54,7 +57,7 @@ export default function AddTaskModal({ visible, onClose, subjects, onSubmit, onM
       <Field label="NAMA TUGAS" value={title} onChangeText={setTitle} placeholder="Contoh: Laporan praktikum jaringan" />
       <View><View style={styles.labelRow}><AppText style={styles.label}>MATA PELAJARAN</AppText><Pressable onPress={onManageSubjects}><AppText style={styles.link}>Kelola</AppText></Pressable></View><View style={styles.chips}>{subjects.map((subject) => <Pill key={subject.id} title={subject.name} active={String(subjectId) === String(subject.id)} onPress={() => setSubjectId(String(subject.id))} />)}</View></View>
       <View><AppText style={styles.label}>BATAS WAKTU</AppText><View style={styles.chips}>{[0, 1, 2].map((days) => { const date = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10); return <Pill key={days} title={days === 0 ? 'Hari Ini' : days === 1 ? 'Besok' : 'Lusa'} active={deadline === date} onPress={() => setDeadline(date)} />; })}</View></View>
-      <Field label="TANGGAL DEADLINE (YYYY-MM-DD)" value={deadline} onChangeText={setDeadline} placeholder="2026-11-08" />
+      <View><AppText style={styles.label}>TANGGAL DEADLINE</AppText><Pressable accessibilityRole="button" onPress={() => setDatePickerVisible(true)} style={styles.dateButton}><AppText style={styles.dateText}>{deadlineDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</AppText><AppText style={styles.dateAction}>Pilih tanggal</AppText></Pressable>{datePickerVisible ? <DateTimePicker value={Number.isNaN(deadlineDate.getTime()) ? new Date() : deadlineDate} mode="date" display="default" minimumDate={new Date()} onChange={(event, selectedDate) => { setDatePickerVisible(false); if (selectedDate) { const year = selectedDate.getFullYear(); const month = String(selectedDate.getMonth() + 1).padStart(2, '0'); const day = String(selectedDate.getDate()).padStart(2, '0'); setDeadline(`${year}-${month}-${day}`); } }} /> : null}</View>
       <View><AppText style={styles.label}>TINGKAT KESULITAN</AppText><View style={styles.chips}>{difficulties.map((item) => <Pill key={item.value} title={item.label} active={difficulty === item.value} onPress={() => setDifficulty(item.value)} />)}</View></View>
       <View><AppText style={styles.label}>JENIS TUGAS</AppText><View style={styles.chips}>{types.map((item) => <Pill key={item.label} title={item.label} active={taskKind === item.label} onPress={() => { setTaskKind(item.label); setType(item.value); }} />)}</View></View>
       <Field label="CATATAN TAMBAHAN" value={notes} onChangeText={setNotes} placeholder="Tulis instruksi atau catatan tugas..." multiline />
@@ -66,4 +69,4 @@ export default function AddTaskModal({ visible, onClose, subjects, onSubmit, onM
   </>;
 }
 
-const styles = StyleSheet.create({ label: { color: '#475569', fontFamily: 'Poppins_600SemiBold', fontSize: 10, marginBottom: 7 }, labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, link: { color: colors.primary, fontSize: 10, fontFamily: 'Poppins_600SemiBold', paddingBottom: 7 }, chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 }, attachActions: { flexDirection: 'row', gap: 6 }, flex: { flex: 1 }, attachment: { minHeight: 55, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 15, backgroundColor: '#F8FAFC' }, preview: { width: 38, height: 38, borderRadius: 8 }, attachmentCopy: { flex: 1 }, fileName: { fontSize: 9, fontFamily: 'Poppins_600SemiBold' }, fileSize: { color: colors.muted, fontSize: 8 }, });
+const styles = StyleSheet.create({ label: { color: '#475569', fontFamily: 'Poppins_600SemiBold', fontSize: 10, marginBottom: 7 }, labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, link: { color: colors.primary, fontSize: 10, fontFamily: 'Poppins_600SemiBold', paddingBottom: 7 }, chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 }, dateButton: { minHeight: 48, borderRadius: 15, borderWidth: 1, borderColor: colors.border, backgroundColor: '#F8FAFC', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14 }, dateText: { color: colors.ink, fontFamily: 'Poppins_500Medium', fontSize: 13 }, dateAction: { color: colors.primary, fontFamily: 'Poppins_600SemiBold', fontSize: 11 }, attachActions: { flexDirection: 'row', gap: 6 }, flex: { flex: 1 }, attachment: { minHeight: 55, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 15, backgroundColor: '#F8FAFC' }, preview: { width: 38, height: 38, borderRadius: 8 }, attachmentCopy: { flex: 1 }, fileName: { fontSize: 9, fontFamily: 'Poppins_600SemiBold' }, fileSize: { color: colors.muted, fontSize: 8 }, });

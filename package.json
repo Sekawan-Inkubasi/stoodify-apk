@@ -12,6 +12,7 @@
     "build:apk": "npx expo prebuild --platform android --no-clean && cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a -Pexpo.useLegacyPackaging=true -Pandroid.enableShrinkResourcesInReleaseBuilds=true -Pandroid.enableMinifyInReleaseBuilds=true -Pandroid.enablePngCrunchInReleaseBuilds=true"
   },
   "dependencies": {
+    "@react-native-community/datetimepicker": "9.2.1",
     "expo": "~58.0.23",
     "expo-camera": "~58.0.14",
     "expo-dev-client": "~58.0.18",
@@ -20,6 +21,7 @@
     "expo-image-picker": "~58.0.10",
     "expo-linear-gradient": "~58.0.3",
     "expo-secure-store": "~58.0.2",
+    "expo-splash-screen": "~58.0.13",
     "expo-status-bar": "~58.0.4",
     "expo-system-ui": "~58.0.7",
     "lucide-react-native": "^1.70.0",

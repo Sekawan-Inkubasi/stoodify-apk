@@ -61,6 +61,14 @@ Tab vertikal **AI ASSISTANT** diposisikan menempel pada sisi kanan hampir semua 
 
 **Perbaikan:** pertahankan akses cepat asisten tetapi sediakan ruang untuknya, misalnya sebagai tombol yang dapat diciutkan, FAB dengan posisi yang tidak menimpa aksi halaman, atau entry point dari kartu AI. Untuk review visual, sembunyikan overlay Expo sebelum mengambil screenshot final.
 
+### P1 — Navbar bawah menampilkan label aktif dan bentuk aktif belum mengikuti referensi
+
+**Bukti:** [Beranda web](native-design-audit/screenshots/web-home.png), [Beranda native](native-design-audit/screenshots/native-home.png), dan screenshot native pada tab Kalender/Tugas/Rencana AI/Profil.
+
+Referensi web menampilkan ikon navigasi; tab aktif dibedakan dengan bidang biru membulat di sekitar ikon tanpa label teks di sampingnya. Navbar native menambahkan label **Beranda**, **Kalender**, dan seterusnya saat tab aktif. Bentuk bidang aktif juga terlihat lebih kotak daripada bentuk bundar di referensi. Ini membuat pola navigasi lebih ramai dan mengubah identitas visual yang sudah familier.
+
+**Perbaikan:** hilangkan label visual saat tab dipilih dan gunakan bidang seleksi berbentuk lingkaran di sekitar ikon. Pertahankan nama tab melalui `accessibilityLabel`, `accessibilityState`, dan target sentuh yang cukup besar, sehingga layar tetap dapat dipahami pembaca layar tanpa menambah teks visual.
+
 ## Audit per halaman
 
 ### Pembuka dan autentikasi
@@ -111,14 +119,16 @@ Modal tambah tugas memiliki field dan pilihan yang cukup lengkap. Saat tidak ada
 
 1. **P0 — Perbaiki token shadow dan komponen bersama.** Hilangkan kebocoran `opacity` ke `Card`/`EmptyState`; pastikan bayangan Android/iOS memakai properti yang sesuai. Verifikasi semua kartu, teks, dan tombol di lima tab serta modal.
 2. **P1 — Bangun ulang fondasi keterbacaan.** Terapkan skala type mobile, warna sekunder dengan kontras memadai, tombol hero yang terbaca, dan target sentuh minimal 44 dp. Periksa pembesaran font dan layar sempit.
-3. **P1 — Hilangkan tabrakan elemen.** Atur ulang tab AI melayang, safe area modal, CTA yang berada dekat navigasi sistem, dan baris chip yang berpotensi overflow.
-4. **P1/P2 — Tutup kesenjangan konten per halaman.** Prioritaskan panel analisis Rencana AI, hierarki Profil, state kosong Kalender/Tugas/Beranda, kemudian copy layar pembuka.
-5. **P2 — Poles interaksi native.** Tambahkan date picker, state tanpa mata pelajaran, hit area tombol ikon, serta perilaku asisten yang tidak menyamarkan prompt preset sebagai pengenalan suara.
-6. **Verifikasi visual ulang di HP.** Ambil ulang screenshot pada resolusi yang sama dan state data yang sama; bandingkan setiap tab, modal, ukuran teks default, dan pembesaran font. Catat issue tersisa sebelum menilai target 90%.
+3. **P1 — Samakan navbar bawah dengan pola web.** Hapus label visual tab aktif, ubah bidang aktif menjadi bundar, lalu cek keterbacaan nama tab melalui aksesibilitas dan target sentuh.
+4. **P1 — Hilangkan tabrakan elemen.** Atur ulang tab AI melayang, safe area modal, CTA yang berada dekat navigasi sistem, dan baris chip yang berpotensi overflow.
+5. **P1/P2 — Tutup kesenjangan konten per halaman.** Prioritaskan panel analisis Rencana AI, hierarki Profil, state kosong Kalender/Tugas/Beranda, kemudian copy layar pembuka.
+6. **P2 — Poles interaksi native.** Tambahkan date picker, state tanpa mata pelajaran, hit area tombol ikon, serta perilaku asisten yang tidak menyamarkan prompt preset sebagai pengenalan suara.
+7. **Verifikasi visual ulang di HP.** Ambil ulang screenshot pada resolusi yang sama dan state data yang sama; bandingkan setiap tab, modal, ukuran teks default, dan pembesaran font. Catat issue tersisa sebelum menilai target 90%.
 
 ## Kriteria penerimaan untuk putaran perbaikan
 
 - Semua teks dan tombol pada `Card`/`EmptyState` tampil dengan opacity normal; tidak ada style shadow yang mengubah opacity konten.
+- Navbar tidak menampilkan label visual pada tab aktif; ikon aktif berada di dalam bidang bundar seperti referensi, sementara nama tab tetap tersedia untuk teknologi bantu.
 - Teks biasa memiliki kontras minimal 4,5:1 dan teks besar/kontrol memenuhi standar kontras yang sesuai.
 - Label utama dan keterangan penting nyaman dibaca pada 360 dp tanpa zoom; kontrol utama dapat disentuh dengan area minimal 44 × 44 dp.
 - FAB/tab AI, modal, input, tombol simpan, dan navigasi sistem tidak saling menutupi.

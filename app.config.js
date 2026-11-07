@@ -5,6 +5,6 @@ module.exports = ({ config }) => {
   const enabled = apiUrl.startsWith('http://');
   return {
     ...config,
-    plugins: [...(config.plugins || []), ['./plugins/withDevCleartext', { enabled }]],
+    plugins: [...(config.plugins || []), '@react-native-community/datetimepicker', 'expo-splash-screen', ['./plugins/withDevCleartext', { enabled }]],
   };
 };

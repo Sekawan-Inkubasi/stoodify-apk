@@ -11,14 +11,17 @@ export function Screen({ children, scroll = true, style, contentStyle }) {
 }
 
 export function AppText({ children, style, numberOfLines, ...props }) {
-  return <Text {...props} numberOfLines={numberOfLines} style={[styles.text, style]}>{children}</Text>;
+  const resolved = StyleSheet.flatten(style);
+  const readableSize = resolved?.fontSize && resolved.fontSize < 12 ? 12 : null;
+  const readableColor = ['#94A3B8', '#CBD5E1'].includes(resolved?.color) ? '#64748B' : null;
+  return <Text {...props} numberOfLines={numberOfLines} style={[styles.text, style, readableSize && { fontSize: readableSize }, readableColor && { color: readableColor }]}>{children}</Text>;
 }
 
-export function Button({ title, onPress, variant = 'primary', icon: Icon, disabled, style, compact = false }) {
+export function Button({ title, onPress, variant = 'primary', icon: Icon, disabled, style, compact = false, textColor, iconColor }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.button, styles[`button_${variant}`], compact && styles.buttonCompact, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>
-      {Icon ? <Icon size={17} color={variant === 'primary' ? '#fff' : colors.primary} /> : null}
-      <AppText style={[styles.buttonText, styles[`buttonText_${variant}`]]}>{title}</AppText>
+      {Icon ? <Icon size={17} color={iconColor || (variant === 'primary' ? '#fff' : colors.primary)} /> : null}
+      <AppText style={[styles.buttonText, styles[`buttonText_${variant}`], textColor && { color: textColor }]}>{title}</AppText>
     </Pressable>
   );
 }
@@ -65,17 +68,17 @@ export const uiStyles = styles;
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.canvas },
   screenContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120, gap: 16 },
-  text: { color: colors.ink, fontFamily: 'Poppins_400Regular', fontSize: 12 },
+  text: { color: colors.ink, fontFamily: 'Poppins_400Regular', fontSize: 14 },
   button: { minHeight: 46, borderRadius: radii.pill, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   button_primary: { backgroundColor: colors.primary }, button_secondary: { backgroundColor: '#E8F0FF' }, button_outline: { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#C7D8FF' }, button_ghost: { backgroundColor: colors.faint }, button_danger: { backgroundColor: '#FFF1F2' },
-  buttonCompact: { minHeight: 38, paddingHorizontal: 14 }, buttonText: { fontFamily: 'Poppins_600SemiBold', fontSize: 12 }, buttonText_primary: { color: '#fff' }, buttonText_secondary: { color: colors.primary }, buttonText_outline: { color: colors.primary }, buttonText_ghost: { color: '#475569' }, buttonText_danger: { color: colors.danger },
+  buttonCompact: { minHeight: 44, paddingHorizontal: 14 }, buttonText: { fontFamily: 'Poppins_600SemiBold', fontSize: 12 }, buttonText_primary: { color: '#fff' }, buttonText_secondary: { color: colors.primary }, buttonText_outline: { color: colors.primary }, buttonText_ghost: { color: '#475569' }, buttonText_danger: { color: colors.danger },
   disabled: { opacity: 0.5 }, pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
   card: { backgroundColor: colors.surface, borderRadius: radii.card, padding: 16, ...shadow },
-  fieldLabel: { color: '#475569', fontFamily: 'Poppins_600SemiBold', fontSize: 10, marginBottom: 7 },
+  fieldLabel: { color: '#475569', fontFamily: 'Poppins_600SemiBold', fontSize: 12, marginBottom: 7 },
   inputWrap: { minHeight: 48, borderRadius: 15, borderWidth: 1, borderColor: colors.border, backgroundColor: '#F8FAFC', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14 },
-  input: { flex: 1, paddingVertical: 10, color: colors.ink, fontFamily: 'Poppins_400Regular', fontSize: 12 }, multilineWrap: { minHeight: 90, alignItems: 'flex-start' }, multilineInput: { minHeight: 84 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 2 }, headerCopy: { flex: 1 }, headerTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, letterSpacing: -0.4 }, headerSub: { fontSize: 10, color: colors.muted, marginTop: 3 }, headerAction: { minHeight: 38, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, backgroundColor: '#fff' }, headerActionText: { color: colors.primary, fontFamily: 'Poppins_600SemiBold', fontSize: 10 },
-  pill: { borderRadius: radii.pill, backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 13 }, pillActive: { backgroundColor: colors.primary }, pillText: { color: '#64748B', fontFamily: 'Poppins_600SemiBold', fontSize: 10 }, pillTextActive: { color: '#fff' },
-  empty: { minHeight: 210, backgroundColor: '#fff', borderRadius: radii.card, alignItems: 'center', justifyContent: 'center', padding: 24, ...shadow }, emptyIcon: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }, emptyTitle: { fontFamily: 'Poppins_700Bold', fontSize: 14, textAlign: 'center' }, emptySub: { color: colors.muted, fontSize: 10, textAlign: 'center', lineHeight: 17, marginTop: 6, maxWidth: 260 }, emptyButton: { marginTop: 15 },
+  input: { flex: 1, paddingVertical: 10, color: colors.ink, fontFamily: 'Poppins_400Regular', fontSize: 14 }, multilineWrap: { minHeight: 90, alignItems: 'flex-start' }, multilineInput: { minHeight: 84 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 2 }, headerCopy: { flex: 1 }, headerTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, letterSpacing: -0.4 }, headerSub: { fontSize: 10, color: colors.muted, marginTop: 3 }, headerAction: { minHeight: 44, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 22, backgroundColor: '#fff' }, headerActionText: { color: colors.primary, fontFamily: 'Poppins_600SemiBold', fontSize: 10 },
+  pill: { minHeight: 44, borderRadius: radii.pill, backgroundColor: '#F1F5F9', paddingVertical: 10, paddingHorizontal: 13, justifyContent: 'center' }, pillActive: { backgroundColor: colors.primary }, pillText: { color: '#475569', fontFamily: 'Poppins_600SemiBold', fontSize: 12 }, pillTextActive: { color: '#fff' },
+  empty: { minHeight: 210, backgroundColor: '#fff', borderRadius: radii.card, alignItems: 'center', justifyContent: 'center', padding: 24, ...shadow }, emptyIcon: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }, emptyTitle: { fontFamily: 'Poppins_700Bold', fontSize: 16, textAlign: 'center' }, emptySub: { color: '#475569', fontSize: 13, textAlign: 'center', lineHeight: 20, marginTop: 6, maxWidth: 260 }, emptyButton: { marginTop: 15 },
   loading: { minHeight: 160, alignItems: 'center', justifyContent: 'center', gap: 12 }, loadingText: { color: colors.muted, fontSize: 11 }, sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }, sectionTitle: { fontFamily: 'Poppins_700Bold', fontSize: 12, letterSpacing: 0.2 }, link: { color: colors.primary, fontFamily: 'Poppins_600SemiBold', fontSize: 10 },
 });
