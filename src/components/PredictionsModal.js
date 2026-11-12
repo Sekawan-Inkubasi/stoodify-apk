@@ -39,8 +39,9 @@ export default function PredictionsModal({
   );
 
   const filteredPredictions = useMemo(() => {
-    if (!activeSubjectId) return predictions;
-    return predictions.filter((p) => String(p.subjectId) === activeSubjectId);
+    const safeList = Array.isArray(predictions) ? predictions.filter(Boolean) : [];
+    if (!activeSubjectId) return safeList;
+    return safeList.filter((p) => p && String(p.subjectId) === activeSubjectId);
   }, [predictions, activeSubjectId]);
 
   return (

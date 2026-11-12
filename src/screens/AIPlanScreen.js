@@ -4,24 +4,31 @@ import { CalendarClock, Check, ChevronRight, Clock3, Sparkles, X } from 'lucide-
 import { AppText, Button, Card, EmptyState, Header, Pill, Screen, SectionTitle } from '../components/ui';
 import { colors } from '../constants/theme';
 
-export default function AIPlanScreen({ sessions, tasks, loading, onReschedule, onAccept, onReject, onFocus, onChat }) {
+export default function AIPlanScreen({ sessions = [], tasks = [], loading, onReschedule, onAccept, onReject, onFocus, onChat }) {
   const [filter, setFilter] = useState('all');
-  const visible = useMemo(() => sessions.filter((session) => {
-    if (filter === 'today') return session.date === new Date().toISOString().slice(0, 10);
-    if (filter === 'upcoming') return session.date >= new Date().toISOString().slice(0, 10);
+  const safeSessions = Array.isArray(sessions) ? sessions.filter(Boolean) : [];
+  const safeTasks = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
+
+  const visible = useMemo(() => safeSessions.filter((session) => {
+    if (!session) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    if (filter === 'today') return session.date === today;
+    if (filter === 'upcoming') return String(session.date || '') >= today;
     return true;
-  }), [sessions, filter]);
-  const workload = tasks.filter((task) => task.status !== 'selesai').reduce((sum, task) => sum + (Number(task.estimatedDurationMinutes) || 0), 0);
+  }), [safeSessions, filter]);
+
+  const workload = safeTasks.filter((task) => task.status !== 'selesai').reduce((sum, task) => sum + (Number(task.estimatedDurationMinutes) || 0), 0);
+
   return <Screen>
     <Header title="Rencana Belajar AI" subtitle="Smart Scheduler & Workload Balancer" />
     <Card style={styles.assistant}><View style={styles.assistantIcon}><Sparkles size={18} color="#fff" /></View><View style={styles.assistantCopy}><AppText style={styles.assistantTitle}>Stoodify AI Assistant Aktif</AppText><AppText style={styles.assistantSub}>Butuh konsultasi belajar atau tanya PR?</AppText></View><Pressable onPress={onChat} style={styles.ask}><AppText style={styles.askText}>Tanya AI</AppText></Pressable></Card>
-    <Card style={styles.workload}><View style={styles.workIcon}><CalendarClock size={19} color={colors.primary} /></View><View style={styles.workCopy}><AppText style={styles.workTitle}>Beban Belajar Aktif</AppText><AppText style={styles.workSub}>{tasks.filter((task) => task.status !== 'selesai').length} tugas · sekitar {Math.ceil(workload / 60)} jam pengerjaan</AppText></View><AppText style={styles.workValue}>{sessions.length}</AppText></Card>
+    <Card style={styles.workload}><View style={styles.workIcon}><CalendarClock size={19} color={colors.primary} /></View><View style={styles.workCopy}><AppText style={styles.workTitle}>Beban Belajar Aktif</AppText><AppText style={styles.workSub}>{safeTasks.filter((task) => task.status !== 'selesai').length} tugas · sekitar {Math.ceil(workload / 60)} jam pengerjaan</AppText></View><AppText style={styles.workValue}>{safeSessions.length}</AppText></Card>
     <Button title={loading ? 'Menyusun Jadwal...' : 'Jalankan Adaptive Rescheduling Otomatis'} icon={Sparkles} onPress={onReschedule} disabled={loading} />
     <View style={styles.section}><SectionTitle>URUTAN PRIORITAS BELAJAR ({visible.length})</SectionTitle></View>
     <View style={styles.filters}><Pill title="Semua" active={filter === 'all'} onPress={() => setFilter('all')} /><Pill title="Hari Ini" active={filter === 'today'} onPress={() => setFilter('today')} /><Pill title="Mendatang" active={filter === 'upcoming'} onPress={() => setFilter('upcoming')} /></View>
     {visible.length ? visible.map((session, index) => {
       const pending = session.status === 'planned' || session.status === 'recommended';
-      return <Card key={session.id} style={styles.session}><View style={styles.rank}><AppText style={styles.rankText}>{index + 1}</AppText></View><View style={styles.sessionCopy}><View style={styles.sessionMeta}><AppText style={styles.date}>{session.date ? new Date(`${session.date}T12:00:00`).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Sesi belajar'}</AppText><AppText style={styles.status}>{session.status === 'completed' ? 'Selesai' : session.status === 'skipped' ? 'Terlewat' : 'Terjadwal'}</AppText></View><AppText style={styles.sessionTitle}>{session.task?.title || 'Tugas belajar'}</AppText><AppText style={styles.sessionSub}>{session.task?.subject?.name || 'Mata pelajaran'} · {session.startTime} · {session.durationMinutes} menit</AppText>{session.reason ? <AppText style={styles.reason} numberOfLines={2}>{session.reason}</AppText> : null}<View style={styles.sessionActions}>{pending ? <><Pressable onPress={() => onAccept(session)} style={styles.accept}><Check size={14} color={colors.success} /><AppText style={styles.acceptText}>Terima</AppText></Pressable><Pressable onPress={() => onReject(session)} style={styles.reject}><X size={14} color={colors.danger} /><AppText style={styles.rejectText}>Tolak</AppText></Pressable></> : <Pressable onPress={() => onFocus(session.task)} style={styles.focus}><Clock3 size={14} color={colors.primary} /><AppText style={styles.focusText}>Mulai Fokus</AppText><ChevronRight size={13} color={colors.primary} /></Pressable>}</View></View></Card>;
+      return <Card key={session.id || String(Math.random())} style={styles.session}><View style={styles.rank}><AppText style={styles.rankText}>{index + 1}</AppText></View><View style={styles.sessionCopy}><View style={styles.sessionMeta}><AppText style={styles.date}>{session.date ? new Date(`${session.date}T12:00:00`).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Sesi belajar'}</AppText><AppText style={styles.status}>{session.status === 'completed' ? 'Selesai' : session.status === 'skipped' ? 'Terlewat' : 'Terjadwal'}</AppText></View><AppText style={styles.sessionTitle}>{session.task?.title || 'Tugas belajar'}</AppText><AppText style={styles.sessionSub}>{session.task?.subject?.name || 'Mata pelajaran'} · {session.startTime || '-'} · {session.durationMinutes || 45} menit</AppText>{session.reason ? <AppText style={styles.reason} numberOfLines={2}>{session.reason}</AppText> : null}<View style={styles.sessionActions}>{pending ? <><Pressable onPress={() => onAccept(session)} style={styles.accept}><Check size={14} color={colors.success} /><AppText style={styles.acceptText}>Terima</AppText></Pressable><Pressable onPress={() => onReject(session)} style={styles.reject}><X size={14} color={colors.danger} /><AppText style={styles.rejectText}>Tolak</AppText></Pressable></> : <Pressable onPress={() => onFocus(session.task)} style={styles.focus}><Clock3 size={14} color={colors.primary} /><AppText style={styles.focusText}>Mulai Fokus</AppText><ChevronRight size={13} color={colors.primary} /></Pressable>}</View></View></Card>;
     }) : <EmptyState icon={CalendarClock} title="Belum Ada Sesi Belajar Terjadwal" subtitle="Susun jadwal dari tugas aktif menggunakan rekomendasi backend AI." action="Susun Jadwal Sekarang" onAction={onReschedule} />}
   </Screen>;
 }

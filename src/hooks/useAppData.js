@@ -32,34 +32,48 @@ export default function useAppData(showMessage) {
     if (!hasActiveSession()) return;
     setLoading(true); setDataError('');
     try {
-      const nextSubjects = await subjectsApi.getSubjects();
+      const nextSubjectsRaw = await subjectsApi.getSubjects();
+      const nextSubjects = Array.isArray(nextSubjectsRaw) ? nextSubjectsRaw.filter(Boolean) : [];
       setSubjects(nextSubjects);
+
+      const predictionPromises = nextSubjects.length
+        ? Promise.allSettled(nextSubjects.map((subject) => predictionsApi.getPredictionsBySubject(subject.id)))
+        : Promise.resolve([]);
+
       const results = await Promise.allSettled([
         tasksApi.getTasks(), schedulesApi.getSchedules(), sessionsApi.getRecommendations(),
         statsApi.getOverview(), notificationsApi.getNotifications({ unread: false }),
-        Promise.allSettled(nextSubjects.map((subject) => predictionsApi.getPredictionsBySubject(subject.id))),
+        predictionPromises,
       ]);
       const [taskResult, scheduleResult, sessionResult, statsResult, notificationResult, predictionResult] = results;
-      if (taskResult.status === 'fulfilled') setTasks(taskResult.value);
-      if (scheduleResult.status === 'fulfilled') setSchedules(scheduleResult.value);
+      if (taskResult.status === 'fulfilled') setTasks(Array.isArray(taskResult.value) ? taskResult.value.filter(Boolean) : []);
+      if (scheduleResult.status === 'fulfilled') setSchedules(Array.isArray(scheduleResult.value) ? scheduleResult.value.filter(Boolean) : []);
       if (sessionResult.status === 'fulfilled') {
-        const loadedSessions = sessionResult.value;
+        const loadedSessions = Array.isArray(sessionResult.value) ? sessionResult.value.filter(Boolean) : [];
         setSessions(loadedSessions);
-        const activeTasks = taskResult.status === 'fulfilled'
-          ? taskResult.value.filter((task) => task.status !== 'selesai')
+        const activeTasks = taskResult.status === 'fulfilled' && Array.isArray(taskResult.value)
+          ? taskResult.value.filter((task) => task && task.status !== 'selesai')
           : [];
         const attemptKey = activeTasks.map((task) => task.id).sort().join(',');
         if (!loadedSessions.length && activeTasks.length && !recommendationAttempts.current.has(attemptKey)) {
           recommendationAttempts.current.add(attemptKey);
           try {
             const generated = await sessionsApi.generateScheduleRecommendations();
-            if (generated.sessions.length) setSessions(generated.sessions);
+            if (generated?.sessions && Array.isArray(generated.sessions)) {
+              setSessions(generated.sessions.filter(Boolean));
+            }
           } catch { /* Keep the empty state available when recommendations cannot be generated. */ }
         }
       }
-      if (statsResult.status === 'fulfilled') setStats(statsResult.value);
-      if (notificationResult.status === 'fulfilled') setNotifications(notificationResult.value);
-      if (predictionResult.status === 'fulfilled') setPredictions(predictionResult.value.filter((item) => item.status === 'fulfilled').flatMap((item) => item.value));
+      if (statsResult.status === 'fulfilled') setStats(statsResult.value || {});
+      if (notificationResult.status === 'fulfilled') setNotifications(Array.isArray(notificationResult.value) ? notificationResult.value.filter(Boolean) : []);
+      if (predictionResult.status === 'fulfilled' && Array.isArray(predictionResult.value)) {
+        const flattened = predictionResult.value
+          .filter((item) => item && item.status === 'fulfilled' && Array.isArray(item.value))
+          .flatMap((item) => item.value)
+          .filter(Boolean);
+        setPredictions(flattened);
+      }
       const failed = results.slice(0, 5).some((item) => item.status === 'rejected');
       if (failed) setDataError('Sebagian data belum dapat dimuat dari server. Tarik ulang atau coba lagi.');
     } catch (error) {

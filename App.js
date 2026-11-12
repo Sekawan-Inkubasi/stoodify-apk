@@ -77,12 +77,27 @@ function StoodifyApp() {
 
   if (!fontsLoaded || data.authLoading) return <View style={styles.loading}><StatusBar barStyle="dark-content" backgroundColor={colors.canvas} /></View>;
   if (webFallback) return <EmergencyWebView onClose={() => setWebFallback(false)} />;
+  const safeTasks = Array.isArray(data.tasks) ? data.tasks.filter(Boolean) : [];
+  const safeNotifications = Array.isArray(data.notifications) ? data.notifications.filter(Boolean) : [];
+  const safeSessions = Array.isArray(data.sessions) ? data.sessions.filter(Boolean) : [];
+  const safeSubjects = Array.isArray(data.subjects) ? data.subjects.filter(Boolean) : [];
+  const safeSchedules = Array.isArray(data.schedules) ? data.schedules.filter(Boolean) : [];
+  const safePredictions = Array.isArray(data.predictions) ? data.predictions.filter(Boolean) : [];
+  const unreadCount = safeNotifications.filter((item) => !item.isRead).length;
+  const urgentCount = safeTasks.filter((task) => task.status !== 'selesai' && Number(task.priorityScore) >= 60).length;
+
   const screenProps = {
-    user: data.user, tasks: data.tasks, subjects: data.subjects, schedules: data.schedules,
-    sessions: data.sessions, notifications: data.notifications, predictions: data.predictions,
-    stats: { ...data.stats, unreadCount: data.notifications.filter((item) => !item.isRead).length }, loading: data.loading,
+    user: data.user,
+    tasks: safeTasks,
+    subjects: safeSubjects,
+    schedules: safeSchedules,
+    sessions: safeSessions,
+    notifications: safeNotifications,
+    predictions: safePredictions,
+    stats: { ...(data.stats || {}), unreadCount },
+    loading: data.loading,
   };
-  const selectedTask = detailTask ? data.tasks.find((task) => task.id === detailTask.id) || detailTask : null;
+  const selectedTask = detailTask ? safeTasks.find((task) => task.id === detailTask.id) || detailTask : null;
 
   return <View style={styles.root}><StatusBar barStyle="dark-content" backgroundColor={colors.canvas} />
     {!data.isLoggedIn ? <SafeAreaView edges={['top', 'bottom']} style={styles.authWrap}><AuthScreen onLogin={data.login} showMessage={showMessage} /></SafeAreaView> : <>
@@ -92,9 +107,9 @@ function StoodifyApp() {
         {activeTab === 'tasks' ? <TasksScreen {...screenProps} onOpenTask={setDetailTask} onToggle={data.toggleTask} onAdd={() => setAddTaskVisible(true)} onManageSubjects={() => setSubjectModalVisible(true)} /> : null}
         {activeTab === 'calendar' ? <CalendarScreen {...screenProps} onAddSchedule={(day) => { setScheduleDay(day); setAddScheduleVisible(true); }} onManageSubjects={() => setSubjectModalVisible(true)} onDeleteSchedule={handleDeleteSchedule} onFocus={openFocus} /> : null}
         {activeTab === 'ai-plan' ? <AIPlanScreen {...screenProps} onReschedule={data.reschedule} onAccept={data.acceptSession} onReject={data.rejectSession} onFocus={openFocus} onChat={() => setChatVisible(true)} /> : null}
-        {activeTab === 'profile' ? <ProfileScreen {...screenProps} subjectsCount={data.subjects.length} onAvatar={handleAvatar} onManageSubjects={() => setSubjectModalVisible(true)} onHelp={() => showMessage('Untuk bantuan, hubungi tim Stoodify melalui kontak dukungan sekolah.', 'Pusat Bantuan Stoodify')} onPro={() => setProVisible(true)} onLogout={handleLogout} onPreferences={loadPreferences} onWebFallback={() => setWebFallback(true)} /> : null}
+        {activeTab === 'profile' ? <ProfileScreen {...screenProps} subjectsCount={safeSubjects.length} onAvatar={handleAvatar} onManageSubjects={() => setSubjectModalVisible(true)} onHelp={() => showMessage('Untuk bantuan, hubungi tim Stoodify melalui kontak dukungan sekolah.', 'Pusat Bantuan Stoodify')} onPro={() => setProVisible(true)} onLogout={handleLogout} onPreferences={loadPreferences} onWebFallback={() => setWebFallback(true)} /> : null}
       </View>
-      <BottomTabs active={activeTab} onChange={setActiveTab} urgentCount={data.tasks.filter((task) => task.status !== 'selesai' && task.priorityScore >= 60).length} bottom={Math.max(14, insets.bottom + 8)} />
+      <BottomTabs active={activeTab} onChange={setActiveTab} urgentCount={urgentCount} bottom={Math.max(14, insets.bottom + 8)} />
       <Pressable accessibilityRole="button" accessibilityLabel="Buka Stoodify AI Assistant" onPress={() => setChatVisible(true)} style={[styles.assistantTab, { bottom: Math.max(88, insets.bottom + 82) }]}><Sparkles size={20} color="#fff" /></Pressable>
     </>}
 

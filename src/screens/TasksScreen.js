@@ -15,23 +15,27 @@ function TaskCard({ task, onOpen, onToggle }) {
   </Pressable>;
 }
 
-export default function TasksScreen({ tasks, subjects, loading, onOpenTask, onToggle, onAdd, onManageSubjects }) {
+export default function TasksScreen({ tasks = [], subjects = [], loading, onOpenTask, onToggle, onAdd, onManageSubjects }) {
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [subject, setSubject] = useState('all');
-  const visible = useMemo(() => tasks.filter((task) => {
+  const safeTasks = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
+  const safeSubjects = Array.isArray(subjects) ? subjects.filter(Boolean) : [];
+
+  const visible = useMemo(() => safeTasks.filter((task) => {
+    if (!task) return false;
     if (filter === 'urgent' && Number(task.priorityScore) < 60) return false;
     if (filter === 'done' && task.status !== 'selesai') return false;
     if (subject !== 'all' && String(task.subjectId) !== subject) return false;
-    return `${task.title} ${task.subject?.name || ''}`.toLowerCase().includes(query.toLowerCase());
-  }), [tasks, filter, subject, query]);
+    return `${task.title || ''} ${task.subject?.name || ''}`.toLowerCase().includes((query || '').toLowerCase());
+  }), [safeTasks, filter, subject, query]);
 
   return <Screen>
-    <Header title="Daftar Tugas" subtitle={`${tasks.filter((t) => t.status !== 'selesai').length} tugas aktif dijadwalkan AI`} action="Tambah" onAction={onAdd} />
+    <Header title="Daftar Tugas" subtitle={`${safeTasks.filter((t) => t.status !== 'selesai').length} tugas aktif dijadwalkan AI`} action="Tambah" onAction={onAdd} />
     <Field value={query} onChangeText={setQuery} placeholder="Cari tugas, materi, atau mata pelajaran..." right={<Search size={17} color="#94A3B8" />} />
-    <View style={styles.filters}>{filters.map((item) => <Pill key={item.id} title={`${item.label}${item.id === 'all' ? ` ${tasks.length}` : item.id === 'urgent' ? ` ${tasks.filter((t) => t.priorityScore >= 60).length}` : ` ${tasks.filter((t) => t.status === 'selesai').length}`}`} active={filter === item.id} onPress={() => setFilter(item.id)} />)}</View>
-    <View style={styles.subjectRow}><SlidersHorizontal size={15} color={colors.primary} /><Pill title="Semua Mapel" active={subject === 'all'} onPress={() => setSubject('all')} />{subjects.slice(0, 3).map((item) => <Pill key={item.id} title={item.code || item.name} active={subject === String(item.id)} onPress={() => setSubject(String(item.id))} />)}<Pressable onPress={onManageSubjects}><AppText style={styles.manage}>Atur Mapel</AppText></Pressable></View>
-    {loading ? <View style={styles.loading}><AppText style={styles.muted}>Memuat tugas...</AppText></View> : visible.length ? visible.map((task) => <TaskCard key={task.id} task={task} onOpen={onOpenTask} onToggle={onToggle} />) : <EmptyState icon={filter === 'urgent' ? Sparkles : Circle} title={tasks.length ? 'Tidak Ada Tugas yang Cocok' : 'Belum Ada Tugas'} subtitle={tasks.length ? 'Coba ubah filter atau kata pencarian.' : 'Tugas yang kamu tambahkan akan muncul di sini dan terhubung ke backend.'} action={!tasks.length ? 'Tambah Tugas' : undefined} onAction={onAdd} />}
+    <View style={styles.filters}>{filters.map((item) => <Pill key={item.id} title={`${item.label}${item.id === 'all' ? ` ${safeTasks.length}` : item.id === 'urgent' ? ` ${safeTasks.filter((t) => Number(t.priorityScore) >= 60).length}` : ` ${safeTasks.filter((t) => t.status === 'selesai').length}`}`} active={filter === item.id} onPress={() => setFilter(item.id)} />)}</View>
+    <View style={styles.subjectRow}><SlidersHorizontal size={15} color={colors.primary} /><Pill title="Semua Mapel" active={subject === 'all'} onPress={() => setSubject('all')} />{safeSubjects.slice(0, 3).map((item) => <Pill key={item.id} title={item.code || item.name} active={subject === String(item.id)} onPress={() => setSubject(String(item.id))} />)}<Pressable onPress={onManageSubjects}><AppText style={styles.manage}>Atur Mapel</AppText></Pressable></View>
+    {loading ? <View style={styles.loading}><AppText style={styles.muted}>Memuat tugas...</AppText></View> : visible.length ? visible.map((task) => <TaskCard key={task.id || String(Math.random())} task={task} onOpen={onOpenTask} onToggle={onToggle} />) : <EmptyState icon={filter === 'urgent' ? Sparkles : Circle} title={safeTasks.length ? 'Tidak Ada Tugas yang Cocok' : 'Belum Ada Tugas'} subtitle={safeTasks.length ? 'Coba ubah filter atau kata pencarian.' : 'Tugas yang kamu tambahkan akan muncul di sini dan terhubung ke backend.'} action={!safeTasks.length ? 'Tambah Tugas' : undefined} onAction={onAdd} />}
   </Screen>;
 }
 
