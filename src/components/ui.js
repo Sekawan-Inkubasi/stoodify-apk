@@ -12,16 +12,16 @@ export function Screen({ children, scroll = true, style, contentStyle }) {
 
 export function AppText({ children, style, numberOfLines, ...props }) {
   const resolved = StyleSheet.flatten(style);
-  const readableSize = resolved?.fontSize && resolved.fontSize < 12 ? 12 : null;
+  const readableSize = resolved?.fontSize && resolved.fontSize < 10 ? 10 : null;
   const readableColor = ['#94A3B8', '#CBD5E1'].includes(resolved?.color) ? '#64748B' : null;
   return <Text {...props} numberOfLines={numberOfLines} style={[styles.text, style, readableSize && { fontSize: readableSize }, readableColor && { color: readableColor }]}>{children}</Text>;
 }
 
-export function Button({ title, onPress, variant = 'primary', icon: Icon, disabled, style, compact = false, textColor, iconColor }) {
+export function Button({ title, onPress, variant = 'primary', icon: Icon, disabled, style, textStyle, compact = false, textColor, iconColor }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.button, styles[`button_${variant}`], compact && styles.buttonCompact, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>
       {Icon ? <Icon size={17} color={iconColor || (variant === 'primary' ? '#fff' : colors.primary)} /> : null}
-      <AppText style={[styles.buttonText, styles[`buttonText_${variant}`], textColor && { color: textColor }]}>{title}</AppText>
+      <AppText style={[styles.buttonText, styles[`buttonText_${variant}`], textColor && { color: textColor }, textStyle]}>{title}</AppText>
     </Pressable>
   );
 }

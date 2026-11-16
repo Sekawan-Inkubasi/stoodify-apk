@@ -45,8 +45,8 @@ export function mapScheduleToUI(schedule) {
     startTime: schedule.start_time,
     endTime: schedule.end_time,
     subject: schedule.subject ? mapSubjectToUI(schedule.subject) : null,
-    room: 'Kelas Utama', // Fallback default
-    teacher: 'Guru Mapel', // Fallback default
+    room: schedule.room || 'Kelas Utama',
+    teacher: schedule.teacher || schedule.subject?.teacher || 'Guru Mapel',
   };
 }
 
@@ -68,12 +68,14 @@ export async function getWeekSchedules() {
   return list.map(mapScheduleToUI);
 }
 
-export async function createSchedule({ subjectId, dayOfWeek, startTime, endTime }) {
+export async function createSchedule({ subjectId, dayOfWeek, startTime, endTime, room, teacher }) {
   const payload = {
     subject_id: Number(subjectId),
     day_of_week: dayToBackend(dayOfWeek),
     start_time: startTime,
     end_time: endTime,
+    room: room || '',
+    teacher: teacher || '',
   };
 
   try {

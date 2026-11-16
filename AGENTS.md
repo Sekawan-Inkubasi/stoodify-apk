@@ -1,5 +1,10 @@
 # AGENTS.md — Stoodify Mobile Application
 
+<!-- antislop:start -->
+## antislop
+For interface work, read the antislop core and the matching installed skill. Resolve the mode from an explicit session instruction first, then global preference, then ask if unresolved. Use `antislop-ui` and `antislop-layoutmobile` for visual work, and `antislop-code` only when editing comments. Run the requested `after` review before delivery.
+<!-- antislop:end -->
+
 Panduan teknis dan operasional untuk seluruh AI Agent yang bekerja pada repositori `stoodify-apk`.
 
 ---

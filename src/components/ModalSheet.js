@@ -5,7 +5,7 @@ import { AppText } from './ui';
 import { colors } from '../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function ModalSheet({ visible, title, subtitle, onClose, children, full = false }) {
+export default function ModalSheet({ visible, title, subtitle, onClose, children, full = false, icon: Icon }) {
   const insets = useSafeAreaInsets();
   return <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
     <View style={styles.overlay}>
@@ -13,6 +13,7 @@ export default function ModalSheet({ visible, title, subtitle, onClose, children
       <View style={[styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 12) }, full && styles.full]}>
         <View style={styles.handle} />
         <View style={styles.header}>
+          {Icon ? <View style={styles.headingIcon}><Icon size={18} color={colors.primary} /></View> : null}
           <View style={styles.titleWrap}><AppText style={styles.title}>{title}</AppText>{subtitle ? <AppText style={styles.subtitle}>{subtitle}</AppText> : null}</View>
           <Pressable accessibilityRole="button" accessibilityLabel="Tutup" onPress={onClose} style={styles.close}><X size={18} color="#64748B" /></Pressable>
         </View>
@@ -27,7 +28,7 @@ const styles = StyleSheet.create({
   sheet: { maxHeight: '92%', minHeight: '35%', backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 20, paddingBottom: 20 },
   full: { height: '92%' }, handle: { width: 40, height: 4, borderRadius: 3, backgroundColor: '#CBD5E1', alignSelf: 'center', marginTop: 10, marginBottom: 14 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  titleWrap: { flex: 1 }, title: { fontFamily: 'Poppins_700Bold', fontSize: 15 }, subtitle: { fontSize: 10, color: colors.muted, marginTop: 3 },
+  headingIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginRight: 10 }, titleWrap: { flex: 1 }, title: { fontFamily: 'Poppins_700Bold', fontSize: 14 }, subtitle: { fontSize: 10, color: colors.muted, marginTop: 3 },
   close: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
   body: { paddingTop: 16, paddingBottom: 20, gap: 14 },
 });

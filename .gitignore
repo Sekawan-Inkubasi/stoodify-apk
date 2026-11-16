@@ -26,3 +26,5 @@ journey/
 # Environment variables
 .env
 .env*.local
+
+anti-slop/
