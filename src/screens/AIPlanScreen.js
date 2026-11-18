@@ -1,23 +1,58 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { CalendarClock, Check, ChevronRight, Clock3, Sparkles, X, Zap } from 'lucide-react-native';
-import { AppText, Button, Card, EmptyState, Header, Pill, Screen, SectionTitle } from '../components/ui';
-import { colors } from '../constants/theme';
+import React, { useMemo, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import {
+  CalendarClock,
+  Check,
+  ChevronRight,
+  Clock3,
+  Sparkles,
+  X,
+  Zap,
+} from "lucide-react-native";
+import {
+  AppText,
+  Button,
+  Card,
+  EmptyState,
+  Header,
+  Pill,
+  Screen,
+  SectionTitle,
+} from "../components/ui";
+import { colors } from "../constants/theme";
 
-export default function AIPlanScreen({ sessions = [], tasks = [], loading, onReschedule, onAccept, onReject, onFocus, onChat }) {
-  const [filter, setFilter] = useState('all');
+export default function AIPlanScreen({
+  sessions = [],
+  tasks = [],
+  loading,
+  onReschedule,
+  onAccept,
+  onReject,
+  onFocus,
+  onChat,
+}) {
+  const [filter, setFilter] = useState("all");
   const safeSessions = Array.isArray(sessions) ? sessions.filter(Boolean) : [];
   const safeTasks = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
 
-  const visible = useMemo(() => safeSessions.filter((session) => {
-    if (!session) return false;
-    const today = new Date().toISOString().slice(0, 10);
-    if (filter === 'today') return session.date === today;
-    if (filter === 'upcoming') return String(session.date || '') >= today;
-    return true;
-  }), [safeSessions, filter]);
+  const visible = useMemo(
+    () =>
+      safeSessions.filter((session) => {
+        if (!session) return false;
+        const today = new Date().toISOString().slice(0, 10);
+        if (filter === "today") return session.date === today;
+        if (filter === "upcoming") return String(session.date || "") >= today;
+        return true;
+      }),
+    [safeSessions, filter],
+  );
 
-  const workload = safeTasks.filter((task) => task.status !== 'selesai').reduce((sum, task) => sum + (Number(task.estimatedDurationMinutes) || 0), 0);
+  const workload = safeTasks
+    .filter((task) => task.status !== "selesai")
+    .reduce(
+      (sum, task) => sum + (Number(task.estimatedDurationMinutes) || 0),
+      0,
+    );
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
   weekStart.setHours(0, 0, 0, 0);
@@ -28,20 +63,376 @@ export default function AIPlanScreen({ sessions = [], tasks = [], loading, onRes
     return !Number.isNaN(date.getTime()) && date >= weekStart && date < weekEnd;
   }).length;
 
-  return <Screen>
-    <Header title="Rencana Belajar AI" subtitle="Smart Scheduler & Workload Balancer" />
-    <Card style={styles.assistant}><View style={styles.assistantCopy}><AppText style={styles.assistantEyebrow}>STOODIFY AI ASSISTANT AKTIF</AppText><AppText style={styles.assistantTitle}>Butuh konsultasi belajar atau tanya PR?</AppText><AppText style={styles.assistantSub}>Tanya asisten kapan saja untuk membantu perjalanan belajarmu.</AppText></View><Pressable onPress={onChat} style={styles.ask}><AppText style={styles.askText}>Tanya AI ›</AppText></Pressable></Card>
-    <Card style={styles.analysis}><View style={styles.analysisHead}><View style={styles.workIcon}><CalendarClock size={17} color={colors.primary} /></View><AppText style={styles.analysisTitle}>Analisis Beban Belajar Siswa</AppText><AppText style={styles.balance}>Ringkasan</AppText></View><View style={styles.metrics}><View style={styles.metric}><AppText style={styles.metricLabel}>Sesi Pekan Ini</AppText><AppText style={styles.metricValue}>{weeklySessions}</AppText></View><View style={styles.metric}><AppText style={styles.metricLabel}>Tugas Prioritas</AppText><AppText style={[styles.metricValue, styles.urgent]}>{safeTasks.filter((task) => task.status !== 'selesai' && Number(task.priorityScore) >= 60).length}</AppText></View><View style={styles.metric}><AppText style={styles.metricLabel}>Estimasi Beban</AppText><AppText style={styles.metricValue}>{Math.ceil(workload / 60)}j</AppText></View></View><View style={styles.algorithm}><Sparkles size={15} color={colors.primary} /><AppText style={styles.algorithmText}>Rekomendasi jadwal mempertimbangkan tenggat, tingkat kesulitan, dan waktu belajar yang tersedia.</AppText></View></Card>
-    <Pressable onPress={onReschedule} disabled={loading} style={styles.reschedule}><View style={styles.rescheduleLabel}><Zap size={12} color="#FBBF24" /><AppText style={styles.rescheduleEyebrow}>PENJADWALAN ADAPTIF</AppText></View><View style={styles.rescheduleRow}><View style={styles.rescheduleCopy}><AppText style={styles.rescheduleTitle}>Perbarui susunan belajar</AppText><AppText style={styles.rescheduleSub}>Susun ulang prioritas berdasarkan tugas aktif.</AppText></View><View style={styles.rescheduleButton}><AppText style={styles.rescheduleButtonText}>{loading ? 'Memuat…' : 'Susun'}</AppText></View></View></Pressable>
-    <View style={styles.section}><SectionTitle>URUTAN PRIORITAS BELAJAR ({visible.length})</SectionTitle></View>
-    <View style={styles.filters}><Pill title="Semua" active={filter === 'all'} onPress={() => setFilter('all')} /><Pill title="Hari Ini" active={filter === 'today'} onPress={() => setFilter('today')} /><Pill title="Mendatang" active={filter === 'upcoming'} onPress={() => setFilter('upcoming')} /></View>
-    {visible.length ? visible.map((session, index) => {
-      const pending = session.status === 'planned' || session.status === 'recommended';
-      return <Card key={session.id || String(Math.random())} style={styles.session}><View style={styles.rank}><AppText style={styles.rankText}>{index + 1}</AppText></View><View style={styles.sessionCopy}><View style={styles.sessionMeta}><AppText style={styles.date}>{session.date ? new Date(`${session.date}T12:00:00`).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Sesi belajar'}</AppText><AppText style={styles.status}>{session.status === 'completed' ? 'Selesai' : session.status === 'skipped' ? 'Terlewat' : 'Terjadwal'}</AppText></View><AppText style={styles.sessionTitle}>{session.task?.title || 'Tugas belajar'}</AppText><AppText style={styles.sessionSub}>{session.task?.subject?.name || 'Mata pelajaran'} · {session.startTime || '-'} · {session.durationMinutes || 45} menit</AppText>{session.reason ? <AppText style={styles.reason} numberOfLines={2}>{session.reason}</AppText> : null}<View style={styles.sessionActions}>{pending ? <><Pressable onPress={() => onAccept(session)} style={styles.accept}><Check size={14} color={colors.success} /><AppText style={styles.acceptText}>Terima</AppText></Pressable><Pressable onPress={() => onReject(session)} style={styles.reject}><X size={14} color={colors.danger} /><AppText style={styles.rejectText}>Tolak</AppText></Pressable></> : <Pressable onPress={() => onFocus(session.task)} style={styles.focus}><Clock3 size={14} color={colors.primary} /><AppText style={styles.focusText}>Mulai Fokus</AppText><ChevronRight size={13} color={colors.primary} /></Pressable>}</View></View></Card>;
-    }) : <EmptyState icon={CalendarClock} title="Belum Ada Sesi Belajar Terjadwal" subtitle="Susun jadwal dari tugas aktif menggunakan rekomendasi backend AI." action="Susun Jadwal Sekarang" onAction={onReschedule} />}
-  </Screen>;
+  return (
+    <Screen>
+      <Header
+        title="Rencana Belajar AI"
+        subtitle="Smart Scheduler & Workload Balancer"
+      />
+      <Card style={styles.assistant}>
+        <View style={styles.assistantCopy}>
+          <AppText style={styles.assistantEyebrow}>
+            STOODIFY AI ASSISTANT AKTIF
+          </AppText>
+          <AppText style={styles.assistantTitle}>
+            Butuh konsultasi belajar atau tanya PR?
+          </AppText>
+          <AppText style={styles.assistantSub}>
+            Tanya asisten kapan saja untuk membantu perjalanan belajarmu.
+          </AppText>
+        </View>
+        <Pressable onPress={onChat} style={styles.ask}>
+          <AppText style={styles.askText}>Tanya AI ›</AppText>
+        </Pressable>
+      </Card>
+      <Card style={styles.analysis}>
+        <View style={styles.analysisHead}>
+          <View style={styles.workIcon}>
+            <CalendarClock size={17} color={colors.primary} />
+          </View>
+          <AppText style={styles.analysisTitle}>
+            Analisis Beban Belajar Siswa
+          </AppText>
+          <AppText style={styles.balance}>Ringkasan</AppText>
+        </View>
+        <View style={styles.metrics}>
+          <View style={styles.metric}>
+            <AppText style={styles.metricLabel}>Sesi Pekan Ini</AppText>
+            <AppText style={styles.metricValue}>{weeklySessions}</AppText>
+          </View>
+          <View style={styles.metric}>
+            <AppText style={styles.metricLabel}>Tugas Prioritas</AppText>
+            <AppText style={[styles.metricValue, styles.urgent]}>
+              {
+                safeTasks.filter(
+                  (task) =>
+                    task.status !== "selesai" &&
+                    Number(task.priorityScore) >= 60,
+                ).length
+              }
+            </AppText>
+          </View>
+          <View style={styles.metric}>
+            <AppText style={styles.metricLabel}>Estimasi Beban</AppText>
+            <AppText style={styles.metricValue}>
+              {Math.ceil(workload / 60)}j
+            </AppText>
+          </View>
+        </View>
+        <View style={styles.algorithm}>
+          <Sparkles size={15} color={colors.primary} />
+          <AppText style={styles.algorithmText}>
+            Rekomendasi jadwal mempertimbangkan tenggat, tingkat kesulitan, dan
+            waktu belajar yang tersedia.
+          </AppText>
+        </View>
+      </Card>
+      <Pressable
+        onPress={onReschedule}
+        disabled={loading}
+        style={styles.reschedule}
+      >
+        <View style={styles.rescheduleLabel}>
+          <Zap size={12} color="#FBBF24" />
+          <AppText style={styles.rescheduleEyebrow}>
+            PENJADWALAN ADAPTIF
+          </AppText>
+        </View>
+        <View style={styles.rescheduleRow}>
+          <View style={styles.rescheduleCopy}>
+            <AppText style={styles.rescheduleTitle}>
+              Perbarui susunan belajar
+            </AppText>
+            <AppText style={styles.rescheduleSub}>
+              Susun ulang prioritas berdasarkan tugas aktif.
+            </AppText>
+          </View>
+          <View style={styles.rescheduleButton}>
+            <AppText style={styles.rescheduleButtonText}>
+              {loading ? "Memuat…" : "Susun"}
+            </AppText>
+          </View>
+        </View>
+      </Pressable>
+      <View style={styles.section}>
+        <SectionTitle>URUTAN PRIORITAS BELAJAR ({visible.length})</SectionTitle>
+      </View>
+      <View style={styles.filters}>
+        <Pill
+          title="Semua"
+          active={filter === "all"}
+          onPress={() => setFilter("all")}
+        />
+        <Pill
+          title="Hari Ini"
+          active={filter === "today"}
+          onPress={() => setFilter("today")}
+        />
+        <Pill
+          title="Mendatang"
+          active={filter === "upcoming"}
+          onPress={() => setFilter("upcoming")}
+        />
+      </View>
+      {visible.length ? (
+        visible.map((session, index) => {
+          const pending =
+            session.status === "planned" || session.status === "recommended";
+          return (
+            <Card
+              key={session.id || String(Math.random())}
+              style={styles.session}
+            >
+              <View style={styles.rank}>
+                <AppText style={styles.rankText}>{index + 1}</AppText>
+              </View>
+              <View style={styles.sessionCopy}>
+                <View style={styles.sessionMeta}>
+                  <AppText style={styles.date}>
+                    {session.date
+                      ? new Date(`${session.date}T12:00:00`).toLocaleDateString(
+                          "id-ID",
+                          { weekday: "short", day: "numeric", month: "short" },
+                        )
+                      : "Sesi belajar"}
+                  </AppText>
+                  <AppText style={styles.status}>
+                    {session.status === "completed"
+                      ? "Selesai"
+                      : session.status === "skipped"
+                        ? "Terlewat"
+                        : "Terjadwal"}
+                  </AppText>
+                </View>
+                <AppText style={styles.sessionTitle}>
+                  {session.task?.title || "Tugas belajar"}
+                </AppText>
+                <AppText style={styles.sessionSub}>
+                  {session.task?.subject?.name || "Mata pelajaran"} ·{" "}
+                  {session.startTime || "-"} · {session.durationMinutes || 45}{" "}
+                  menit
+                </AppText>
+                {session.reason ? (
+                  <AppText style={styles.reason} numberOfLines={2}>
+                    {session.reason}
+                  </AppText>
+                ) : null}
+                <View style={styles.sessionActions}>
+                  {pending ? (
+                    <>
+                      <Pressable
+                        onPress={() => onAccept(session)}
+                        style={styles.accept}
+                      >
+                        <Check size={14} color={colors.success} />
+                        <AppText style={styles.acceptText}>Terima</AppText>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => onReject(session)}
+                        style={styles.reject}
+                      >
+                        <X size={14} color={colors.danger} />
+                        <AppText style={styles.rejectText}>Tolak</AppText>
+                      </Pressable>
+                    </>
+                  ) : (
+                    <Pressable
+                      onPress={() => onFocus(session.task)}
+                      style={styles.focus}
+                    >
+                      <Clock3 size={14} color={colors.primary} />
+                      <AppText style={styles.focusText}>Mulai Fokus</AppText>
+                      <ChevronRight size={13} color={colors.primary} />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            </Card>
+          );
+        })
+      ) : (
+        <EmptyState
+          icon={CalendarClock}
+          title="Belum Ada Sesi Belajar Terjadwal"
+          subtitle="Susun jadwal dari tugas aktif menggunakan rekomendasi backend AI."
+          action="Susun Jadwal Sekarang"
+          onAction={onReschedule}
+        />
+      )}
+    </Screen>
+  );
 }
 
 const styles = StyleSheet.create({
-  assistant: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, backgroundColor: colors.primary, borderColor: '#3447E8' }, assistantCopy: { flex: 1 }, assistantEyebrow: { color: '#DCE8FF', fontFamily: 'Poppins_700Bold', fontSize: 8, letterSpacing: 0.5 }, assistantTitle: { color: '#fff', fontFamily: 'Poppins_700Bold', fontSize: 12, marginTop: 5 }, assistantSub: { color: '#EAF2FF', fontSize: 9, marginTop: 4 }, ask: { minHeight: 44, paddingHorizontal: 12, backgroundColor: '#fff', borderRadius: 14, justifyContent: 'center' }, askText: { color: colors.primary, fontSize: 10, fontFamily: 'Poppins_700Bold' }, analysis: { gap: 12 }, analysisHead: { flexDirection: 'row', alignItems: 'center', gap: 8 }, workIcon: { width: 32, height: 32, borderRadius: 11, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' }, analysisTitle: { flex: 1, fontFamily: 'Poppins_700Bold', fontSize: 11 }, balance: { color: colors.success, fontFamily: 'Poppins_600SemiBold', fontSize: 8, backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 }, metrics: { flexDirection: 'row', gap: 8 }, metric: { flex: 1, minHeight: 58, borderRadius: 13, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', padding: 5 }, metricLabel: { color: colors.muted, fontSize: 8, textAlign: 'center' }, metricValue: { fontFamily: 'Poppins_700Bold', fontSize: 16, color: colors.ink, marginTop: 2 }, urgent: { color: colors.danger }, algorithm: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, padding: 10, borderRadius: 12, backgroundColor: '#F1F7FF' }, algorithmText: { flex: 1, color: '#334155', fontSize: 9, lineHeight: 15 }, reschedule: { borderRadius: 20, backgroundColor: '#111827', padding: 15 }, rescheduleLabel: { flexDirection: 'row', alignItems: 'center', gap: 5 }, rescheduleEyebrow: { color: '#FBBF24', fontSize: 8, fontFamily: 'Poppins_700Bold' }, rescheduleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 }, rescheduleCopy: { flex: 1 }, rescheduleTitle: { color: '#fff', fontFamily: 'Poppins_700Bold', fontSize: 11 }, rescheduleSub: { color: '#CBD5E1', fontSize: 9, marginTop: 3 }, rescheduleButton: { minHeight: 42, paddingHorizontal: 14, borderRadius: 14, backgroundColor: colors.primary, justifyContent: 'center' }, rescheduleButtonText: { color: '#fff', fontFamily: 'Poppins_700Bold', fontSize: 10 }, section: { marginTop: 4 }, filters: { flexDirection: 'row', gap: 8 }, session: { flexDirection: 'row', alignItems: 'flex-start', gap: 11, padding: 14 }, rank: { width: 29, height: 29, borderRadius: 11, backgroundColor: '#EAF1FF', alignItems: 'center', justifyContent: 'center' }, rankText: { color: colors.primary, fontFamily: 'Poppins_700Bold', fontSize: 11 }, sessionCopy: { flex: 1 }, sessionMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, date: { color: colors.muted, fontSize: 9, fontFamily: 'Poppins_600SemiBold' }, status: { color: colors.success, backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, fontSize: 8 }, sessionTitle: { fontFamily: 'Poppins_700Bold', fontSize: 11, marginTop: 7 }, sessionSub: { color: colors.muted, fontSize: 9, marginTop: 3 }, reason: { color: '#475569', fontSize: 9, marginTop: 7, lineHeight: 15 }, sessionActions: { flexDirection: 'row', gap: 14, marginTop: 12 }, accept: { flexDirection: 'row', alignItems: 'center', gap: 4 }, acceptText: { color: colors.success, fontFamily: 'Poppins_600SemiBold', fontSize: 9 }, reject: { flexDirection: 'row', alignItems: 'center', gap: 4 }, rejectText: { color: colors.danger, fontFamily: 'Poppins_600SemiBold', fontSize: 9 }, focus: { flexDirection: 'row', alignItems: 'center', gap: 4 }, focusText: { color: colors.primary, fontFamily: 'Poppins_600SemiBold', fontSize: 9 },
+  assistant: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 16,
+    backgroundColor: colors.primary,
+    borderColor: "#3447E8",
+  },
+  assistantCopy: { flex: 1 },
+  assistantEyebrow: {
+    color: "#DCE8FF",
+    fontFamily: "Poppins_700Bold",
+    fontSize: 8,
+    letterSpacing: 0.5,
+  },
+  assistantTitle: {
+    color: "#fff",
+    fontFamily: "Poppins_700Bold",
+    fontSize: 12,
+    marginTop: 5,
+  },
+  assistantSub: { color: "#EAF2FF", fontSize: 9, marginTop: 4 },
+  ask: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    justifyContent: "center",
+  },
+  askText: {
+    color: colors.primary,
+    fontSize: 10,
+    fontFamily: "Poppins_700Bold",
+  },
+  analysis: { gap: 12 },
+  analysisHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  workIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  analysisTitle: { flex: 1, fontFamily: "Poppins_700Bold", fontSize: 11 },
+  balance: {
+    color: colors.success,
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 8,
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 16,
+  },
+  metrics: { flexDirection: "row", gap: 8 },
+  metric: {
+    flex: 1,
+    minHeight: 58,
+    borderRadius: 16,
+    backgroundColor: "#F8FAFC",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 5,
+  },
+  metricLabel: { color: colors.muted, fontSize: 8, textAlign: "center" },
+  metricValue: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 16,
+    color: colors.ink,
+    marginTop: 2,
+  },
+  urgent: { color: colors.danger },
+  algorithm: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+    padding: 10,
+    borderRadius: 16,
+    backgroundColor: "#F1F7FF",
+  },
+  algorithmText: { flex: 1, color: "#334155", fontSize: 9, lineHeight: 15 },
+  reschedule: { borderRadius: 16, backgroundColor: "#111827", padding: 15 },
+  rescheduleLabel: { flexDirection: "row", alignItems: "center", gap: 5 },
+  rescheduleEyebrow: {
+    color: "#FBBF24",
+    fontSize: 8,
+    fontFamily: "Poppins_700Bold",
+  },
+  rescheduleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 5,
+  },
+  rescheduleCopy: { flex: 1 },
+  rescheduleTitle: {
+    color: "#fff",
+    fontFamily: "Poppins_700Bold",
+    fontSize: 11,
+  },
+  rescheduleSub: { color: "#CBD5E1", fontSize: 9, marginTop: 3 },
+  rescheduleButton: {
+    minHeight: 42,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+  },
+  rescheduleButtonText: {
+    color: "#fff",
+    fontFamily: "Poppins_700Bold",
+    fontSize: 10,
+  },
+  section: { marginTop: 4 },
+  filters: { flexDirection: "row", gap: 8 },
+  session: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 11,
+    padding: 14,
+  },
+  rank: {
+    width: 29,
+    height: 29,
+    borderRadius: 16,
+    backgroundColor: "#EAF1FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rankText: {
+    color: colors.primary,
+    fontFamily: "Poppins_700Bold",
+    fontSize: 11,
+  },
+  sessionCopy: { flex: 1 },
+  sessionMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  date: { color: colors.muted, fontSize: 9, fontFamily: "Poppins_600SemiBold" },
+  status: {
+    color: colors.success,
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    fontSize: 8,
+  },
+  sessionTitle: { fontFamily: "Poppins_700Bold", fontSize: 11, marginTop: 7 },
+  sessionSub: { color: colors.muted, fontSize: 9, marginTop: 3 },
+  reason: { color: "#475569", fontSize: 9, marginTop: 7, lineHeight: 15 },
+  sessionActions: { flexDirection: "row", gap: 14, marginTop: 12 },
+  accept: { flexDirection: "row", alignItems: "center", gap: 4 },
+  acceptText: {
+    color: colors.success,
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 9,
+  },
+  reject: { flexDirection: "row", alignItems: "center", gap: 4 },
+  rejectText: {
+    color: colors.danger,
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 9,
+  },
+  focus: { flexDirection: "row", alignItems: "center", gap: 4 },
+  focusText: {
+    color: colors.primary,
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 9,
+  },
 });
