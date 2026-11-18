@@ -25,7 +25,7 @@ export function PreferencesModal({ visible, onClose, value, onSave, busy }) {
     <Field label="DURASI SESI (MENIT)" value={duration} onChangeText={setDuration} keyboardType="number-pad" />
     <AppText style={{ color: '#475569', fontFamily: 'Poppins_600SemiBold', fontSize: 10 }}>HARI AKTIF</AppText>
     <View style={{ flexDirection: 'row', gap: 5, flexWrap: 'wrap' }}>{dayOptions.map((day, index) => <Pill key={day} title={dayLabels[index]} active={activeDays.includes(day)} onPress={() => toggleDay(day)} />)}</View>
-    <Button title={busy ? 'Menyimpan...' : 'Simpan Preferensi'} onPress={() => onSave({ start_time: start, end_time: end, session_duration: Number(duration) || 60, active_days: activeDays.join(',') })} disabled={busy} />
+    <Button title={busy ? 'Menyimpan...' : 'Simpan Preferensi'} onPress={() => onSave({ start_time: start, end_time: end, session_duration: Number(duration) || 60, active_days: activeDays.join(',') })} disabled={busy} loading={busy} />
   </ModalSheet>;
 }
 

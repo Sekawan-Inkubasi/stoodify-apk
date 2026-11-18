@@ -15,6 +15,7 @@ import {
   Card,
   EmptyState,
   Header,
+  Loading,
   Pill,
   Screen,
   SectionTitle,
@@ -174,7 +175,9 @@ export default function AIPlanScreen({
           onPress={() => setFilter("upcoming")}
         />
       </View>
-      {visible.length ? (
+      {loading && !safeSessions.length ? (
+        <Loading label="Menyusun urutan prioritas & beban belajar AI..." />
+      ) : visible.length ? (
         visible.map((session, index) => {
           const pending =
             session.status === "planned" || session.status === "recommended";

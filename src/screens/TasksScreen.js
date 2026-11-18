@@ -13,6 +13,7 @@ import {
   EmptyState,
   Field,
   Header,
+  Loading,
   Pill,
   Screen,
 } from "../components/ui";
@@ -155,10 +156,8 @@ export default function TasksScreen({
           <AppText style={styles.manage}>Atur Mapel</AppText>
         </Pressable>
       </View>
-      {loading ? (
-        <View style={styles.loading}>
-          <AppText style={styles.muted}>Memuat tugas...</AppText>
-        </View>
+      {loading && !safeTasks.length ? (
+        <Loading label="Menghubungkan & memuat daftar tugas..." />
       ) : visible.length ? (
         visible.map((task) => (
           <TaskCard

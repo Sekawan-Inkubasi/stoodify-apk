@@ -209,6 +209,7 @@ export default function AuthScreen({ onLogin, showMessage }) {
             }
             onPress={submit}
             disabled={busy}
+            loading={busy}
             style={styles.submit}
           />
           {mode === "login" ? (

@@ -31,7 +31,7 @@ export default function ManageSubjectsModal({ visible, onClose, subjects, onCrea
     <Field label="NAMA MATA PELAJARAN" value={name} onChangeText={setName} placeholder="Contoh: Matematika" />
     <View><AppText style={styles.label}>WARNA</AppText><View style={styles.colors}>{palette.map((item) => <Pressable key={item} onPress={() => setColor(item)} style={[styles.color, { backgroundColor: item }]}>{color === item ? <Check size={15} color="#fff" /> : null}</Pressable>)}</View></View>
     <View><AppText style={styles.label}>TINGKAT KESULITAN</AppText><View style={styles.chips}>{[1, 2, 3, 4, 5].map((value) => <Pill key={value} title={`${value}`} active={difficulty === value} onPress={() => setDifficulty(value)} />)}</View></View>
-    <Button title={busy ? 'Menyimpan...' : editing ? 'Simpan Perubahan' : 'Tambah Mata Pelajaran'} icon={Plus} onPress={save} disabled={busy || !name.trim()} />
+    <Button title={busy ? 'Menyimpan...' : editing ? 'Simpan Perubahan' : 'Tambah Mata Pelajaran'} icon={Plus} onPress={save} disabled={busy || !name.trim()} loading={busy} />
   </ModalSheet>;
 }
 

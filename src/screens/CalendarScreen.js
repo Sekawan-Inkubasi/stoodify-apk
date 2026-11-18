@@ -13,6 +13,7 @@ import {
   Card,
   EmptyState,
   Header,
+  Loading,
   Pill,
   Screen,
   SectionTitle,
@@ -25,6 +26,7 @@ export default function CalendarScreen({
   schedules = [],
   sessions = [],
   subjects = [],
+  loading = false,
   onAddSchedule,
   onManageSubjects,
   onDeleteSchedule,
@@ -98,7 +100,9 @@ export default function CalendarScreen({
         <SectionTitle action="Tambah" onAction={() => onAddSchedule(day)}>
           PELAJARAN {day.toUpperCase()} ({daySchedules.length})
         </SectionTitle>
-        {daySchedules.length ? (
+        {loading && !safeSchedules.length ? (
+          <Loading label={`Memuat jadwal pelajaran hari ${day}...`} compact />
+        ) : daySchedules.length ? (
           daySchedules.map((item) => (
             <View key={item.id} style={styles.eventRow}>
               <View style={styles.time}>
@@ -151,7 +155,9 @@ export default function CalendarScreen({
       {mode === "integrated" ? (
         <Card style={styles.listCard}>
           <SectionTitle>SESI FOKUS HARI INI</SectionTitle>
-          {daySessions.length ? (
+          {loading && !safeSessions.length ? (
+            <Loading label="Memuat sesi fokus hari ini..." compact />
+          ) : daySessions.length ? (
             daySessions.map((item) => (
               <View key={item.id} style={styles.sessionRow}>
                 <View style={styles.sessionIcon}>

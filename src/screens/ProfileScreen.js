@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 import { BookOpen, CheckCircle2, ChevronRight, CircleHelp, Clock3, Crown, Flame, Globe2, LogOut, Settings2, UserRound } from 'lucide-react-native';
 import { AppText, Card, Header, Screen } from '../components/ui';
 import { colors } from '../constants/theme';
@@ -8,7 +8,7 @@ function MenuRow({ icon: Icon, title, subtitle, onPress, tint = '#EFF6FF', dange
   return <Pressable onPress={onPress} style={styles.menuRow}><View style={[styles.menuIcon, { backgroundColor: tint }]}><Icon size={17} color={danger ? colors.danger : colors.primary} /></View><View style={styles.menuCopy}><AppText style={[styles.menuTitle, danger && styles.danger]}>{title}</AppText>{subtitle ? <AppText style={styles.menuSub}>{subtitle}</AppText> : null}</View><ChevronRight size={16} color="#94A3B8" /></Pressable>;
 }
 
-export default function ProfileScreen({ user, stats, subjectsCount, onAvatar, onManageSubjects, onHelp, onPro, onLogout, onPreferences, onWebFallback }) {
+export default function ProfileScreen({ user, stats, subjectsCount, loading = false, onAvatar, onManageSubjects, onHelp, onPro, onLogout, onPreferences, onWebFallback }) {
   return <Screen>
     <Header title="Profil & Akun" subtitle="Statistik belajar dan preferensi penjadwalan AI" />
     <Card style={styles.profileCard}>
@@ -18,7 +18,7 @@ export default function ProfileScreen({ user, stats, subjectsCount, onAvatar, on
       </View>
       <Pressable onPress={onPro} style={styles.proRow}><View style={styles.proIcon}><Crown size={17} color="#A16207" /></View><View style={styles.proCopy}><AppText style={styles.proTitle}>Paket Siswa Reguler</AppText><AppText style={styles.proSub}>Upgrade ke Stoodify Pro untuk fitur lebih lengkap</AppText></View><ChevronRight size={17} color="#94A3B8" /></Pressable>
     </Card>
-      <View style={styles.stats}>{[[stats?.streakDays || 0, 'Streak', 'd', Flame, '#F97316', '#FFF7ED'], [stats?.totalStudyHours || 0, 'Fokus', 'h', Clock3, colors.primary, '#EFF6FF'], [stats?.onTimeRate || 0, 'Tepat Waktu', '%', CheckCircle2, '#10B981', '#ECFDF5']].map(([value, label, suffix, Icon, tint, background]) => <Card key={label} style={styles.stat}><View style={[styles.statIcon, { backgroundColor: background }]}><Icon size={16} color={tint} /></View><AppText style={styles.statValue}>{value}{suffix}</AppText><AppText style={styles.statLabel}>{label}</AppText></Card>)}</View>
+      <View style={styles.stats}>{[[stats?.streakDays || 0, 'Streak', 'd', Flame, '#F97316', '#FFF7ED'], [stats?.totalStudyHours || 0, 'Fokus', 'h', Clock3, colors.primary, '#EFF6FF'], [stats?.onTimeRate || 0, 'Tepat Waktu', '%', CheckCircle2, '#10B981', '#ECFDF5']].map(([value, label, suffix, Icon, tint, background]) => <Card key={label} style={styles.stat}><View style={[styles.statIcon, { backgroundColor: background }]}><Icon size={16} color={tint} /></View>{loading && !stats?.streakDays && !stats?.totalStudyHours ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 4 }} /> : <AppText style={styles.statValue}>{value}{suffix}</AppText>}<AppText style={styles.statLabel}>{label}</AppText></Card>)}</View>
     <Card style={styles.menuCard}><MenuRow icon={BookOpen} title="Mata Pelajaran" subtitle={`${subjectsCount} mata pelajaran aktif terdaftar`} onPress={onManageSubjects} /><View style={styles.divider} /><MenuRow icon={Settings2} title="Preferensi Belajar" subtitle="Atur jam dan durasi fokus harian" onPress={onPreferences} /><View style={styles.divider} /><MenuRow icon={CircleHelp} title="Pusat Bantuan & Panduan" subtitle="Tanya jawab dan cara kerja rekomendasi AI" onPress={onHelp} /><View style={styles.divider} /><MenuRow icon={Globe2} title="Buka Versi Web Darurat" subtitle="Gunakan versi web Stoodify bila diperlukan" onPress={onWebFallback} /><View style={styles.divider} /><MenuRow icon={LogOut} title="Keluar dari Akun" subtitle="Kembali ke layar masuk" onPress={onLogout} danger tint="#FFF1F2" /></Card>
   </Screen>;
 }

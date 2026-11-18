@@ -72,6 +72,10 @@ Agent wajib membedakan secara tegas antara **fakta yang telah terbukti di kode a
 3. **Animasi & Performa:**
    - Hanya lakukan animasi pada properti GPU-friendly (`transform`, `opacity`).
    - Bersihkan seluruh timer, listener, dan subscription pada cleanup function `useEffect` (misal `BackHandler.remove()`).
+4. **State Asinkron & Feedback UI/UX (Loading States):**
+   - Setiap komponen, layar, atau section yang memuat data asinkron dari API/backend wajib menampilkan indikator spin loading (`ActivityIndicator` atau komponen `Loading`), baik secara section penuh maupun compact.
+   - Dilarang membiarkan container/section kosong atau langsung merender `EmptyState` saat proses fetch data dari server masih berlangsung, guna mencegah efek *content flashing* dan pergeseran layout mendadak saat data tiba.
+   - Berikan teks indikasi yang kontekstual dan jelas (misal: "Memuat agenda belajar...", "Menyusun rekomendasi AI...") demi kenyamanan dan kepastian UX siswa.
 
 ---
 
@@ -138,6 +142,6 @@ Untuk menghindari hilangnya progres saat eksekusi terhenti:
 Sebuah task pada repositori ini dinyatakan selesai (**DONE**) apabila:
 1. Kode tidak memiliki syntax error dan lulus audit struktur file (<= 300 baris, max 400 dengan justifikasi).
 2. Konfigurasi Expo & Android tetap sinkron dan tidak merusak skrip build (`npx expo start`, `assembleRelease`).
-3. Penanganan state krusial (Loading, Offline/Error, Hardware Back Button) tetap terverifikasi utuh.
+3. Penanganan state krusial (Spin Loading pada setiap section pemuat data API tanpa content flash, Offline/Error, Hardware Back Button) tetap terverifikasi utuh.
 4. Tidak ada asumsi library yang tidak terbukti dalam `package.json`.
 5. Hasil kerja dilaporkan secara faktual, transparan, dan dapat diverifikasi langsung.

@@ -372,6 +372,7 @@ export default function AddTaskModal({
           title={busy ? "Menyimpan..." : "Simpan & Jadwalkan dengan AI"}
           onPress={save}
           disabled={busy}
+          loading={busy}
         />
       </ModalSheet>
       <CameraCaptureModal

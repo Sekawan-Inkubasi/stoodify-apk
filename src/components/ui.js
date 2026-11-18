@@ -58,30 +58,35 @@ export function Button({
   variant = "primary",
   icon: Icon,
   disabled,
+  loading = false,
   style,
   textStyle,
   compact = false,
   textColor,
   iconColor,
 }) {
+  const spinnerColor =
+    iconColor || (variant === "primary" ? "#fff" : colors.primary);
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || loading}
       style={({ pressed }) => [
         styles.button,
         styles[`button_${variant}`],
         compact && styles.buttonCompact,
-        disabled && styles.disabled,
-        pressed && !disabled && styles.pressed,
+        (disabled || loading) && styles.disabled,
+        pressed && !disabled && !loading && styles.pressed,
         style,
       ]}
     >
-      {Icon ? (
+      {loading ? (
+        <ActivityIndicator size="small" color={spinnerColor} />
+      ) : Icon ? (
         <Icon
           size={17}
-          color={iconColor || (variant === "primary" ? "#fff" : colors.primary)}
+          color={spinnerColor}
         />
       ) : null}
       <AppText
@@ -206,11 +211,18 @@ export function EmptyState({ icon: Icon, title, subtitle, action, onAction }) {
   );
 }
 
-export function Loading({ label = "Memuat data..." }) {
+export function Loading({
+  label = "Memuat data...",
+  compact = false,
+  style,
+  textStyle,
+}) {
   return (
-    <View style={styles.loading}>
-      <ActivityIndicator color={colors.primary} />
-      <AppText style={styles.loadingText}>{label}</AppText>
+    <View style={[styles.loading, compact && styles.loadingCompact, style]}>
+      <ActivityIndicator size="small" color={colors.primary} />
+      {label ? (
+        <AppText style={[styles.loadingText, textStyle]}>{label}</AppText>
+      ) : null}
     </View>
   );
 }
@@ -373,10 +385,16 @@ const styles = StyleSheet.create({
   },
   emptyButton: { marginTop: 15 },
   loading: {
-    minHeight: 160,
+    minHeight: 140,
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 10,
+    paddingVertical: 14,
+  },
+  loadingCompact: {
+    minHeight: 64,
+    paddingVertical: 10,
+    gap: 7,
   },
   loadingText: { color: colors.muted, fontSize: 11 },
   sectionTitleRow: {

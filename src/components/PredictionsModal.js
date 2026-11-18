@@ -10,7 +10,7 @@ import {
   ThumbsUp,
 } from "lucide-react-native";
 import ModalSheet from "./ModalSheet";
-import { AppText, Button, Card, EmptyState, Pill } from "./ui";
+import { AppText, Button, Card, EmptyState, Loading, Pill } from "./ui";
 import { colors, radii } from "../constants/theme";
 
 export default function PredictionsModal({
@@ -99,7 +99,9 @@ export default function PredictionsModal({
       />
 
       <View style={styles.listContainer}>
-        {filteredPredictions.length > 0 ? (
+        {busy ? (
+          <Loading label="AI sedang menganalisis materi silabus & prasyarat..." />
+        ) : filteredPredictions.length > 0 ? (
           filteredPredictions.map((pred) => {
             const prereqList = (pred.prerequisites || "")
               .split(",")

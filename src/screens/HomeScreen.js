@@ -21,6 +21,7 @@ import {
   Button,
   Card,
   EmptyState,
+  Loading,
   Screen,
   SectionTitle,
 } from "../components/ui";
@@ -43,6 +44,7 @@ export default function HomeScreen({
   tasks = [],
   sessions = [],
   stats = {},
+  loading = false,
   onTab,
   onAddTask,
   onFocus,
@@ -193,7 +195,14 @@ export default function HomeScreen({
           <AppText style={styles.detail}>Detail</AppText>
         </Pressable>
       </Card>
-      {safeSessions.length ? (
+      {loading && !safeSessions.length ? (
+        <Card style={styles.agenda}>
+          <SectionTitle action="Lihat semua" onAction={() => onTab("ai-plan")}>
+            AGENDA BELAJAR
+          </SectionTitle>
+          <Loading label="Menyusun agenda belajar hari ini..." compact />
+        </Card>
+      ) : safeSessions.length ? (
         <Card style={styles.agenda}>
           <SectionTitle action="Lihat semua" onAction={() => onTab("ai-plan")}>
             AGENDA BELAJAR
@@ -260,7 +269,9 @@ export default function HomeScreen({
         <SectionTitle action="Lihat Semua" onAction={() => onTab("tasks")}>
           PRIORITAS TUGAS TERDEKAT ({pending.length})
         </SectionTitle>
-        {pending.length ? (
+        {loading && !pending.length ? (
+          <Loading label="Memuat prioritas tugas aktif..." compact />
+        ) : pending.length ? (
           pending.slice(0, 3).map((task) => (
             <Pressable
               key={task.id || String(Math.random())}
