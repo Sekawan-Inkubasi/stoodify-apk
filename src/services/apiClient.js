@@ -6,50 +6,65 @@ import { getAccessToken, getRefreshToken, setTokens, clearTokens } from './token
  * Dilengkapi timeout, Bearer Auth injection, auto-refresh JWT (401), dan query helper.
  */
 
-let isRefreshing = false;
-let refreshSubscribers = [];
+let refreshPromise = null;
 
-function subscribeTokenRefresh(cb) {
-  refreshSubscribers.push(cb);
+function isPublicAuthEndpoint(endpoint) {
+  const normalized = (endpoint || '').toLowerCase();
+  return (
+    normalized.includes('/auth/login') ||
+    normalized.includes('/auth/register') ||
+    normalized.includes('/auth/refresh') ||
+    normalized.includes('/auth/password-reset')
+  );
 }
 
-function onRefreshed(newAccessToken) {
-  refreshSubscribers.forEach((cb) => cb(newAccessToken));
-  refreshSubscribers = [];
-}
-
-async function performTokenRefresh() {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) {
-    clearTokens();
-    return null;
+export async function performTokenRefresh() {
+  if (refreshPromise) {
+    return refreshPromise;
   }
 
-  try {
-    const url = `${API_BASE_URL.replace(/\/+$/, '')}/auth/refresh`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-
-    const data = await response.json();
-    if (response.ok && data?.success && data?.data?.access_token) {
-      setTokens({
-        accessToken: data.data.access_token,
-        refreshToken: data.data.refresh_token || refreshToken,
-      });
-      return data.data.access_token;
+  refreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      clearTokens();
+      return null;
     }
-  } catch {
-    // Refresh gagal
-  }
 
-  clearTokens();
-  return null;
+    try {
+      const url = `${API_BASE_URL.replace(/\/+$/, '')}/auth/refresh`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (response.ok && data?.success && data?.data?.access_token) {
+        setTokens({
+          accessToken: data.data.access_token,
+          refreshToken: data.data.refresh_token || refreshToken,
+        });
+        return data.data.access_token;
+      }
+
+      // Hanya hapus sesi jika backend secara eksplisit menyatakan refresh token tidak valid / revoked (401 / 403)
+      if (response.status === 401 || response.status === 403) {
+        clearTokens();
+      }
+      return null;
+    } catch {
+      // Gangguan jaringan sementara (timeout / offline) — jangan hapus token agar sesi tidak terputus paksa
+      return null;
+    }
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
 }
 
 export async function request(endpoint, options = {}) {
@@ -79,41 +94,17 @@ export async function request(endpoint, options = {}) {
 
     clearTimeout(timeoutId);
 
-    // Tangani 401 Unauthorized dengan Refresh Token
-    if (response.status === 401 && !options._retry && !endpoint.includes('/auth/')) {
-      if (!isRefreshing) {
-        isRefreshing = true;
-        const newAccessToken = await performTokenRefresh();
-        isRefreshing = false;
-        onRefreshed(newAccessToken);
-        if (newAccessToken) {
-          return request(endpoint, {
-            ...options,
-            _retry: true,
-            headers: {
-              ...(options.headers || {}),
-              Authorization: `Bearer ${newAccessToken}`,
-            },
-          });
-        }
-      } else {
-        return new Promise((resolve, reject) => {
-          subscribeTokenRefresh((newAccessToken) => {
-            if (newAccessToken) {
-              resolve(
-                request(endpoint, {
-                  ...options,
-                  _retry: true,
-                  headers: {
-                    ...(options.headers || {}),
-                    Authorization: `Bearer ${newAccessToken}`,
-                  },
-                })
-              );
-            } else {
-              reject(new Error('Sesi autentikasi telah berakhir. Silakan login kembali.'));
-            }
-          });
+    // Tangani 401 Unauthorized dengan Refresh Token (kecuali endpoint auth publik)
+    if (response.status === 401 && !options._retry && !isPublicAuthEndpoint(endpoint)) {
+      const newAccessToken = await performTokenRefresh();
+      if (newAccessToken) {
+        return request(endpoint, {
+          ...options,
+          _retry: true,
+          headers: {
+            ...(options.headers || {}),
+            Authorization: `Bearer ${newAccessToken}`,
+          },
         });
       }
     }

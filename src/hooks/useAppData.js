@@ -7,7 +7,7 @@ import * as sessionsApi from '../services/studySessionService';
 import * as statsApi from '../services/statisticsService';
 import * as notificationsApi from '../services/notificationService';
 import * as predictionsApi from '../services/predictionService';
-import { hydrateTokens, hasActiveSession, clearTokens } from '../services/tokenStorage';
+import { hydrateTokens, hasActiveSession, clearTokens, subscribeTokenChange } from '../services/tokenStorage';
 import { API_BASE_URL } from '../constants/config';
 
 const initialUser = { name: 'Siswa', grade: 'SMA - Fase F', school: 'Stoodify', email: '', avatarUrl: null };
@@ -86,19 +86,34 @@ export default function useAppData(showMessage) {
     (async () => {
       const tokens = await hydrateTokens();
       if (!mounted) return;
-      if (tokens.accessToken) {
+      if (tokens.accessToken || tokens.refreshToken) {
         try {
           const me = await auth.getMe();
           if (!mounted) return;
           if (me) {
             setUser({ ...initialUser, ...me, avatarUrl: me.avatar_url || me.avatarUrl || null });
             setIsLoggedIn(true);
-          } else clearTokens();
-        } catch { clearTokens(); }
+          } else if (!hasActiveSession()) {
+            clearTokens();
+          }
+        } catch {
+          if (!hasActiveSession()) {
+            clearTokens();
+          }
+        }
       }
       if (mounted) setAuthLoading(false);
     })();
     return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeTokenChange((tokens) => {
+      if (!tokens.accessToken && !tokens.refreshToken) {
+        setIsLoggedIn(false);
+      }
+    });
+    return unsubscribe;
   }, []);
 
   useEffect(() => { if (isLoggedIn) refresh(); }, [isLoggedIn, refresh]);
