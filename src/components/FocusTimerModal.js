@@ -11,6 +11,7 @@ import {
 import { AppText, Pill } from "./ui";
 import { colors } from "../constants/theme";
 import { useDialog } from "../context/DialogContext";
+import useFocusAudio from "../hooks/useFocusAudio";
 
 export default function FocusTimerModal({
   visible,
@@ -28,6 +29,14 @@ export default function FocusTimerModal({
   const [active, setActive] = useState(false);
   const [ambient, setAmbient] = useState(false);
   const completed = useRef(false);
+
+  const isCompleted = visible && left === 0;
+  useFocusAudio({
+    visible,
+    active,
+    ambient,
+    isCompleted,
+  });
   useEffect(() => {
     const seconds =
       (initialMinutes || task?.estimatedDurationMinutes || 25) * 60;
