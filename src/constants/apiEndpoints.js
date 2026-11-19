@@ -48,6 +48,7 @@ export const ENDPOINTS = {
   STUDY_SESSION_DETAIL: (id) => `/study-sessions/${id}`,
 
   // AI Bridge
+  AI_CHAT: '/ai/chat',
   AI_SCHEDULE_GENERATE: '/ai/schedule-recommendations/generate',
   AI_SCHEDULE_RECOMMENDATIONS: '/ai/schedule-recommendations',
   AI_SCHEDULE_ACCEPT: (id) => `/ai/schedule-recommendations/${id}/accept`,

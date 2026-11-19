@@ -10,7 +10,7 @@ export async function getOverview() {
     doneTasks: Number(data.done_tasks) || 0,
     lateTasks: Number(data.late_tasks) || 0,
     pendingTasks: Number(data.pending_tasks) || 0,
-    onTimeRate: Number(data.on_time_rate) || 0,
+    onTimeRate: Math.round(Number(data.on_time_rate) || 0),
     totalStudyMinutes: Number(data.total_study_minutes) || 0,
     totalStudyHours: Math.round(((Number(data.total_study_minutes) || 0) / 60) * 10) / 10,
     totalSubjects: Number(data.total_subjects) || 0,

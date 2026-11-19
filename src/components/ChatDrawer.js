@@ -1,25 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { Animated, BackHandler, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
 import { Bot, RotateCcw, Send, Sparkles, X } from "lucide-react-native";
 import { AppText } from "./ui";
 import { colors } from "../constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  ASSISTANT_PROMPTS,
-  generateAssistantReply,
-} from "../services/aiChatService";
+import { ASSISTANT_PROMPTS, generateAssistantReply, sendChatMessage } from "../services/aiChatService";
 
 export default function ChatDrawer({
   visible,
@@ -47,38 +32,21 @@ export default function ChatDrawer({
   ]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const timer = useRef(null);
   const list = useRef(null);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
-
   useEffect(() => {
-    if (Platform.OS !== "android") return undefined;
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKeyboardOffset(e.endCoordinates?.height || 0);
+    if (!isOpen) return undefined;
+    const backSub = BackHandler.addEventListener("hardwareBackPress", () => {
+      handleClose();
+      return true;
     });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardOffset(0);
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+    return () => backSub.remove();
+  }, [isOpen]);
 
   useEffect(() => {
     if (visible) {
       isClosing.current = false;
       setIsOpen(true);
-      slideAnim.setValue(drawerWidth);
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        damping: 24,
-        stiffness: 220,
-        mass: 0.8,
-        useNativeDriver: true,
-      }).start();
     } else if (isOpen && !isClosing.current) {
       Animated.timing(slideAnim, {
         toValue: drawerWidth,
@@ -87,6 +55,19 @@ export default function ChatDrawer({
       }).start(() => setIsOpen(false));
     }
   }, [visible, drawerWidth]);
+
+  useEffect(() => {
+    if (isOpen && !isClosing.current) {
+      slideAnim.setValue(drawerWidth);
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        damping: 24,
+        stiffness: 220,
+        mass: 0.8,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isOpen, drawerWidth]);
 
   const handleClose = () => {
     if (isClosing.current) return;
@@ -103,21 +84,43 @@ export default function ChatDrawer({
     });
   };
 
-  const send = (text = input) => {
-    if (!text.trim() || thinking) return;
-    const userMessage = { id: `u-${Date.now()}`, sender: "user", text: text.trim() };
+  const send = async (text = input) => {
+    const trimmed = text.trim();
+    if (!trimmed || thinking) return;
+    const userMessage = { id: `u-${Date.now()}`, sender: "user", text: trimmed };
     setMessages((items) => [...items, userMessage]);
     setInput("");
     setThinking(true);
-    timer.current = setTimeout(() => {
-      const { reply, action } = generateAssistantReply(text, { user, tasks, sessions });
-      setMessages((items) => [...items, { id: `a-${Date.now()}`, sender: "ai", text: reply, action }]);
+    try {
+      const { reply, action } = await sendChatMessage(trimmed, {
+        history: messages,
+        user,
+        tasks,
+        sessions,
+      });
+      setMessages((items) => [
+        ...items,
+        { id: `a-${Date.now()}`, sender: "ai", text: reply, action },
+      ]);
+    } catch (err) {
+      const fallback = generateAssistantReply(trimmed, { user, tasks, sessions });
+      setMessages((items) => [
+        ...items,
+        { id: `a-${Date.now()}`, sender: "ai", text: fallback.reply, action: fallback.action },
+      ]);
+    } finally {
       setThinking(false);
-    }, 550);
+    }
   };
 
   const reset = () => {
-    setMessages([{ id: `welcome-${Date.now()}`, sender: "ai", text: "Percakapan baru dimulai. Ada yang bisa saya bantu?" }]);
+    setMessages([
+      {
+        id: `welcome-${Date.now()}`,
+        sender: "ai",
+        text: "Percakapan baru dimulai. Ada yang bisa saya bantu?",
+      },
+    ]);
   };
 
   const backdropOpacity = slideAnim.interpolate({
@@ -126,15 +129,34 @@ export default function ChatDrawer({
     extrapolate: "clamp",
   });
 
+  if (!isOpen) return null;
+
   return (
-    <Modal visible={isOpen} transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
+    <Modal
+      visible={isOpen}
+      transparent
+      animationType="none"
+      onRequestClose={handleClose}
+    >
       <View style={styles.overlay}>
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} accessibilityLabel="Tutup asisten" />
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={handleClose}
+            accessibilityLabel="Tutup asisten"
+          />
         </Animated.View>
 
-        <Animated.View style={[styles.drawer, { width: drawerWidth, transform: [{ translateX: slideAnim }] }]}>
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboardContainer}>
+        <Animated.View
+          style={[
+            styles.drawer,
+            { width: drawerWidth, transform: [{ translateX: slideAnim }] },
+          ]}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.keyboardContainer}
+          >
             {/* Header Anti-Overlap */}
             <View style={[styles.header, { paddingTop: Math.max(14, insets.top + 8) }]}>
               <View style={styles.headerLeft}>
@@ -147,7 +169,7 @@ export default function ChatDrawer({
                   <View style={styles.badgeRow}>
                     <View style={styles.smartBadge}>
                       <Sparkles size={10} color={colors.primary} />
-                      <AppText style={styles.smartBadgeText}>AI Aktif</AppText>
+                      <AppText style={styles.smartBadgeText}>LLM Aktif</AppText>
                     </View>
                   </View>
                 </View>
@@ -166,6 +188,7 @@ export default function ChatDrawer({
             {/* Chat Messages */}
             <ScrollView
               ref={list}
+              style={styles.messagesScroll}
               onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
               contentContainerStyle={styles.messages}
               keyboardShouldPersistTaps="handled"
@@ -202,11 +225,11 @@ export default function ChatDrawer({
               ) : null}
             </ScrollView>
 
-            {/* Input Dock with Android Keyboard Offset */}
+            {/* Input Dock */}
             <View
               style={[
                 styles.inputDock,
-                { paddingBottom: Math.max(12, keyboardOffset > 0 ? keyboardOffset + 8 : insets.bottom + 10) },
+                { paddingBottom: Math.max(10, insets.bottom + 6) },
               ]}
             >
               <View style={styles.inputWrap}>
@@ -239,7 +262,7 @@ export default function ChatDrawer({
 const styles = StyleSheet.create({
   overlay: { flex: 1, flexDirection: "row", justifyContent: "flex-end" },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(15, 23, 42, 0.65)" },
-  drawer: { height: "100%", backgroundColor: "#F8FAFC", borderTopLeftRadius: 20, borderBottomLeftRadius: 20, overflow: "hidden", elevation: 20 },
+  drawer: { height: "100%", backgroundColor: "#F8FAFC", borderTopLeftRadius: 20, borderBottomLeftRadius: 20, overflow: "hidden", elevation: 24 },
   keyboardContainer: { flex: 1 },
   header: { backgroundColor: colors.primaryDark, paddingHorizontal: 14, paddingBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   headerLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, marginRight: 8 },
@@ -252,6 +275,7 @@ const styles = StyleSheet.create({
   smartBadgeText: { color: colors.primary, fontFamily: "Poppins_700Bold", fontSize: 8 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   iconBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255, 255, 255, 0.15)", alignItems: "center", justifyContent: "center" },
+  messagesScroll: { flex: 1 },
   messages: { padding: 14, gap: 10 },
   messageRow: { flexDirection: "row", justifyContent: "flex-start" },
   userRow: { justifyContent: "flex-end" },

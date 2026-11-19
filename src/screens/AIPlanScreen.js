@@ -70,7 +70,7 @@ export default function AIPlanScreen({
         title="Rencana Belajar AI"
         subtitle="Smart Scheduler & Workload Balancer"
       />
-      <Card style={styles.assistant}>
+      <Card style={styles.assistant} onPress={onChat}>
         <View style={styles.assistantCopy}>
           <AppText style={styles.assistantEyebrow}>
             STOODIFY AI ASSISTANT AKTIF

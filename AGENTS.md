@@ -137,7 +137,7 @@ Untuk menghindari hilangnya progres saat eksekusi terhenti:
 ## 8. Keamanan, Proteksi File & Definition of Done (DoD)
 
 ### A. Proteksi Keamanan & File Pengguna
-- **Sensitivitas Kredensial:** Dilarang memasukkan keystore release (`*.jks`, `*.keystore`), token EAS, atau credential rahasia ke dalam tracking git.
+- **Sensitivitas Kredensial & Larangan Keras Hardcode API Key:** DILARANG KERAS menyimpan, menuliskan, atau menaruh API KEY (AI, Stripe, Firebase, Google, dll.), secret token, keystore release (`*.jks`, `*.keystore`), token EAS, atau kredensial rahasia secara hardcoded di dalam source code repositori apa pun alasannya. Seluruh API key, token, atau kredensial rahasia WAJIB disimpan di dalam file `.env` lokal (yang diabaikan oleh `.gitignore`) dan diakses murni via environment variables (`process.env.EXPO_PUBLIC_*`). Pelanggaran terhadap aturan ini memicu pemblokiran otomatis oleh GitHub Push Protection (Secret Scanning GH013).
 - **Izin Android Minimal:** Hanya daftarkan izin aplikasi pada `app.json` yang memang dibutuhkan fitur (misal: `CAMERA`, `RECORD_AUDIO`, `INTERNET`).
 - **Non-Destructive Guard:** Dilarang menghapus atau mengubah file pengguna yang sedang tidak terkait dengan instruksi aktif.
 
@@ -147,4 +147,5 @@ Sebuah task pada repositori ini dinyatakan selesai (**DONE**) apabila:
 2. Konfigurasi Expo & Android tetap sinkron dan tidak merusak skrip build (`npx expo start`, `assembleRelease`).
 3. Penanganan state krusial (Spin Loading pada setiap section pemuat data API tanpa content flash, Offline/Error, Hardware Back Button) tetap terverifikasi utuh.
 4. Tidak ada asumsi library yang tidak terbukti dalam `package.json`.
-5. Hasil kerja dilaporkan secara faktual, transparan, dan dapat diverifikasi langsung.
+5. Bebas dari hardcoded secret/API key dalam seluruh pohon commit git dan lolos verifikasi GitHub Secret Scanning / Push Protection.
+6. Hasil kerja dilaporkan secara faktual, transparan, dan dapat diverifikasi langsung.
