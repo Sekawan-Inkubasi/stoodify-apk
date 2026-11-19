@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -17,6 +17,7 @@ import ModalSheet from "./ModalSheet";
 import CameraCaptureModal from "./CameraCaptureModal";
 import { AppText, Button, Field, Pill } from "./ui";
 import { colors } from "../constants/theme";
+import { useDialog } from "../context/DialogContext";
 
 const difficulties = [
   { label: "Mudah", value: 2 },
@@ -100,12 +101,18 @@ export default function AddTaskModal({
       type: "document",
     });
   };
+  const { showDialog } = useDialog();
   const chooseAttachment = () =>
-    Alert.alert("Pilih Lampiran", "Pilih foto atau dokumen tugas.", [
-      { text: "Foto / Galeri", onPress: pickImage },
-      { text: "Dokumen", onPress: pickDocument },
-      { text: "Batal", style: "cancel" },
-    ]);
+    showDialog({
+      title: "Pilih Lampiran",
+      message: "Pilih jenis file yang ingin dilampirkan.",
+      type: "info",
+      confirmText: "Foto / Galeri",
+      cancelText: "Dokumen",
+      showCancel: true,
+      onConfirm: pickImage,
+      onCancel: pickDocument,
+    });
   const save = async () => {
     if (!title.trim())
       return showMessage(

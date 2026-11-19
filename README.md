@@ -142,10 +142,11 @@ APK release dibuat di `android/app/build/outputs/apk/release/app-release.apk`. P
 
 ## Struktur kode
 
-- `App.js`: entry aplikasi, tab, modal global, dan tombol Back Android.
+- `App.js`: entry aplikasi, tab, modal global, dialog provider, dan penanganan tombol Back Android.
 - `src/screens/`: layar utama (HomeScreen, TasksScreen, CalendarScreen, AIPlanScreen, ProfileScreen) dan autentikasi.
-- `src/components/`: komponen UI bersama, navigasi tab bawah, dan modal native (termasuk `PredictionsModal` terpadu dengan analisis silabus AI Kurikulum Merdeka).
-- `src/services/`: API client terpusat dan layanan domain (auth, tasks, subjects, schedules, study sessions, stats, notifications, predictions).
+- `src/components/`: komponen UI bersama, navigasi tab bawah, modal native, dan `CustomAlertDialog` (dialog modern Stoodify Design System pengganti `Alert.alert`).
+- `src/context/`: context provider global (`DialogContext` untuk deklaratif dialog alert/confirm).
+- `src/services/`: API client terpusat (dengan auto-refresh JWT, proactive refresh sebelum expired, dan atomic SecureStore persistence) serta layanan domain (auth, tasks, subjects, schedules, study sessions, stats, notifications, predictions, aiChat).
 - `src/constants/`: konfigurasi API, endpoint URL, dan token desain (colors, radii, shadow).
 
-Fitur Prediksi Materi telah terintegrasi langsung dengan backend dan engine AI terpadu, mendukung inferensi materi mendatang, penandaan prasyarat, tips persiapan (*Curi Start*), serta feedback akurasi interaktif. Lampiran tugas hanya ditampilkan sebagai pratinjau lokal karena backend belum menyediakan endpoint penyimpanannya. Asisten percakapan menggunakan respons lokal; endpoint chat belum tersedia.
+Fitur Prediksi Materi telah terintegrasi langsung dengan backend dan engine AI terpadu (LLM Gemini `gemini-2.5-flash`), mendukung inferensi materi mendatang, penandaan prasyarat, tips persiapan (*Curi Start*), serta feedback akurasi interaktif. Sesi autentikasi dilengkapi penyimpanan token terproteksi di Expo SecureStore dengan rotasi refresh token otomatis 7 hari.

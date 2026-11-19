@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
 import {
   Pause,
   Play,
@@ -10,6 +10,7 @@ import {
 } from "lucide-react-native";
 import { AppText, Pill } from "./ui";
 import { colors } from "../constants/theme";
+import { useDialog } from "../context/DialogContext";
 
 export default function FocusTimerModal({
   visible,
@@ -43,13 +44,14 @@ export default function FocusTimerModal({
     );
     return () => clearInterval(timer);
   }, [visible, active, left]);
+  const { showMessage } = useDialog();
   useEffect(() => {
     if (!visible || left !== 0 || completed.current) return;
     completed.current = true;
     setActive(false);
-    Alert.alert("Sesi Tuntas", "Selamat! Sesi belajar berhasil tuntas.");
+    showMessage("Selamat! Sesi belajar berhasil tuntas.", "Sesi Tuntas", "success");
     onComplete(task?.id, Math.round(total / 60));
-  }, [left, visible, task?.id, total, onComplete]);
+  }, [left, visible, task?.id, total, onComplete, showMessage]);
   const setDuration = (minutes) => {
     setActive(false);
     completed.current = false;

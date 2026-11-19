@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import * as auth from '../services/authService';
 import * as tasksApi from '../services/taskService';
 import * as subjectsApi from '../services/subjectService';
@@ -7,7 +8,14 @@ import * as sessionsApi from '../services/studySessionService';
 import * as statsApi from '../services/statisticsService';
 import * as notificationsApi from '../services/notificationService';
 import * as predictionsApi from '../services/predictionService';
-import { hydrateTokens, hasActiveSession, clearTokens, subscribeTokenChange } from '../services/tokenStorage';
+import {
+  hydrateTokens,
+  hasActiveSession,
+  clearTokens,
+  subscribeTokenChange,
+  isTokenExpiringSoon,
+} from '../services/tokenStorage';
+import { performTokenRefresh } from '../services/apiClient';
 import { API_BASE_URL } from '../constants/config';
 
 const initialUser = { name: 'Siswa', grade: 'SMA - Fase F', school: 'Stoodify', email: '', avatarUrl: null };
@@ -114,6 +122,16 @@ export default function useAppData(showMessage) {
       }
     });
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const handleAppStateChange = async (nextState) => {
+      if (nextState === 'active' && hasActiveSession() && isTokenExpiringSoon(300)) {
+        await performTokenRefresh();
+      }
+    };
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
   }, []);
 
   useEffect(() => { if (isLoggedIn) refresh(); }, [isLoggedIn, refresh]);

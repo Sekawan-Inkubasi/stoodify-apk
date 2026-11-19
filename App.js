@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, BackHandler, Platform, Pressable, StatusBar, StyleSheet, View } from 'react-native';
+import { BackHandler, Platform, Pressable, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as ImagePicker from 'expo-image-picker';
+import { DialogProvider, useDialog } from './src/context/DialogContext';
 import HomeScreen from './src/screens/HomeScreen';
 import TasksScreen from './src/screens/TasksScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
@@ -47,7 +48,7 @@ function StoodifyApp() {
     Poppins_600SemiBold: require('./assets/fonts/Poppins_600SemiBold.ttf'),
     Poppins_700Bold: require('./assets/fonts/Poppins_700Bold.ttf'),
   });
-  const showMessage = useCallback((message, title = 'Stoodify') => Alert.alert(title, message), []);
+  const { showDialog, showMessage } = useDialog();
   const data = useAppData(showMessage);
 
   useEffect(() => {
@@ -71,8 +72,28 @@ function StoodifyApp() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85 });
     if (!result.canceled && result.assets?.[0]) await data.uploadAvatar(result.assets[0]);
   }, [data, showMessage]);
-  const handleLogout = useCallback(() => Alert.alert('Keluar dari akun?', 'Kamu akan kembali ke layar masuk.', [{ text: 'Batal', style: 'cancel' }, { text: 'Keluar', style: 'destructive', onPress: data.logout }]), [data.logout]);
-  const handleDeleteSchedule = useCallback((item) => Alert.alert('Hapus jadwal?', `Jadwal ${item.subject?.name || ''} hari ${item.dayOfWeek} akan dihapus.`, [{ text: 'Batal', style: 'cancel' }, { text: 'Hapus', style: 'destructive', onPress: () => data.deleteSchedule(item) }]), [data.deleteSchedule]);
+  const handleLogout = useCallback(() => {
+    showDialog({
+      title: 'Keluar dari akun?',
+      message: 'Kamu akan kembali ke layar masuk.',
+      type: 'danger',
+      confirmText: 'Keluar',
+      cancelText: 'Batal',
+      showCancel: true,
+      onConfirm: data.logout,
+    });
+  }, [data.logout, showDialog]);
+  const handleDeleteSchedule = useCallback((item) => {
+    showDialog({
+      title: 'Hapus jadwal?',
+      message: `Jadwal ${item.subject?.name || ''} hari ${item.dayOfWeek} akan dihapus.`,
+      type: 'danger',
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      showCancel: true,
+      onConfirm: () => data.deleteSchedule(item),
+    });
+  }, [data.deleteSchedule, showDialog]);
   const loadPreferences = useCallback(async () => { await data.loadPreferences(); setPreferencesVisible(true); }, [data.loadPreferences]);
 
   if (!fontsLoaded || data.authLoading) return <View style={styles.loading}><StatusBar barStyle="dark-content" backgroundColor={colors.canvas} /></View>;
@@ -127,7 +148,15 @@ function StoodifyApp() {
 }
 
 export default function App() {
-  return <SafeAreaProvider><AppErrorBoundary><StoodifyApp /></AppErrorBoundary></SafeAreaProvider>;
+  return (
+    <SafeAreaProvider>
+      <AppErrorBoundary>
+        <DialogProvider>
+          <StoodifyApp />
+        </DialogProvider>
+      </AppErrorBoundary>
+    </SafeAreaProvider>
+  );
 }
 
 const styles = StyleSheet.create({

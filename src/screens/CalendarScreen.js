@@ -1,26 +1,29 @@
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import {
-  BookOpen,
-  CalendarDays,
-  Clock3,
-  Plus,
-  Trash2,
-} from "lucide-react-native";
-import {
-  AppText,
-  Button,
-  Card,
-  EmptyState,
-  Header,
-  Loading,
-  Pill,
-  Screen,
-  SectionTitle,
-} from "../components/ui";
+import { BookOpen, CalendarDays, Clock3, Plus, Trash2 } from "lucide-react-native";
+import { AppText, Button, Card, EmptyState, Header, Loading, Pill, Screen, SectionTitle } from "../components/ui";
 import { colors } from "../constants/theme";
 
 const days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
+
+function getLocalDateString(dateObj = new Date()) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getDateForDayName(targetDay) {
+  const now = new Date();
+  const currentDayIndex = (now.getDay() + 6) % 7; // 0 = Senin, 1 = Selasa, ..., 4 = Jumat
+  const targetIndex = days.indexOf(targetDay);
+  if (targetIndex === -1) return getLocalDateString(now);
+
+  const diff = targetIndex - currentDayIndex;
+  const targetDate = new Date(now);
+  targetDate.setDate(now.getDate() + diff);
+  return getLocalDateString(targetDate);
+}
 
 export default function CalendarScreen({
   schedules = [],
@@ -32,13 +35,11 @@ export default function CalendarScreen({
   onDeleteSchedule,
   onFocus,
 }) {
-  const [day, setDay] = useState(
-    days[(new Date().getDay() + 6) % 7] || "Senin",
-  );
+  const todayDayName = days[(new Date().getDay() + 6) % 7] || "Senin";
+  const [day, setDay] = useState(todayDayName);
   const [mode, setMode] = useState("integrated");
-  const safeSchedules = Array.isArray(schedules)
-    ? schedules.filter(Boolean)
-    : [];
+
+  const safeSchedules = Array.isArray(schedules) ? schedules.filter(Boolean) : [];
   const safeSessions = Array.isArray(sessions) ? sessions.filter(Boolean) : [];
   const safeSubjects = Array.isArray(subjects) ? subjects.filter(Boolean) : [];
 
@@ -46,17 +47,42 @@ export default function CalendarScreen({
     () =>
       safeSchedules
         .filter((row) => row && row.dayOfWeek === day)
-        .sort((a, b) =>
-          String(a?.startTime || "").localeCompare(String(b?.startTime || "")),
-        ),
+        .sort((a, b) => String(a?.startTime || "").localeCompare(String(b?.startTime || ""))),
     [safeSchedules, day],
   );
-  const daySessions =
-    mode === "integrated"
-      ? safeSessions.filter(
-          (row) => row && row.date === new Date().toISOString().slice(0, 10),
-        )
-      : [];
+
+  const targetDateStr = useMemo(() => getDateForDayName(day), [day]);
+  const isToday = targetDateStr === getLocalDateString(new Date());
+
+  const daySessions = useMemo(() => {
+    if (mode !== "integrated") return [];
+
+    // Filter sesi yang tanggalnya cocok dengan hari yang dipilih dan bukan skipped
+    const filtered = safeSessions.filter((row) => {
+      if (!row || row.status === "skipped") return false;
+      return String(row.date || "") === targetDateStr;
+    });
+
+    // Deduplikasi slot sesi jika ada slot kembar dari multiple generate
+    const seen = new Set();
+    const deduplicated = [];
+    for (const item of filtered) {
+      const key = `${item.taskId || item.id}-${item.startTime || ""}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduplicated.push(item);
+      }
+    }
+
+    // Urutkan kronologis berdasarkan jam mulai
+    return deduplicated.sort((a, b) =>
+      String(a?.startTime || "").localeCompare(String(b?.startTime || "")),
+    );
+  }, [mode, safeSessions, targetDateStr]);
+
+  const focusSectionTitle = isToday
+    ? `SESI FOKUS HARI INI (${day.toUpperCase()})`
+    : `SESI FOKUS HARI ${day.toUpperCase()}`;
 
   return (
     <Screen>
@@ -67,16 +93,8 @@ export default function CalendarScreen({
         onAction={onManageSubjects}
       />
       <View style={styles.modeRow}>
-        <Pill
-          title="Kalender Terpadu"
-          active={mode === "integrated"}
-          onPress={() => setMode("integrated")}
-        />
-        <Pill
-          title="Jam Sekolah Saja"
-          active={mode === "school"}
-          onPress={() => setMode("school")}
-        />
+        <Pill title="Kalender Terpadu" active={mode === "integrated"} onPress={() => setMode("integrated")} />
+        <Pill title="Jam Sekolah Saja" active={mode === "school"} onPress={() => setMode("school")} />
       </View>
       <View style={styles.week}>
         {days.map((item) => (
@@ -85,14 +103,8 @@ export default function CalendarScreen({
             onPress={() => setDay(item)}
             style={[styles.dayButton, day === item && styles.dayButtonActive]}
           >
-            <AppText
-              style={[styles.dayShort, day === item && styles.dayActive]}
-            >
-              {item.slice(0, 3)}
-            </AppText>
-            <AppText style={[styles.dayName, day === item && styles.dayActive]}>
-              {item}
-            </AppText>
+            <AppText style={[styles.dayShort, day === item && styles.dayActive]}>{item.slice(0, 3)}</AppText>
+            <AppText style={[styles.dayName, day === item && styles.dayActive]}>{item}</AppText>
           </Pressable>
         ))}
       </View>
@@ -106,31 +118,16 @@ export default function CalendarScreen({
           daySchedules.map((item) => (
             <View key={item.id} style={styles.eventRow}>
               <View style={styles.time}>
-                <AppText style={styles.timeText}>
-                  {item.startTime || "-"}
-                </AppText>
+                <AppText style={styles.timeText}>{item.startTime || "-"}</AppText>
                 <AppText style={styles.timeDash}>—</AppText>
                 <AppText style={styles.timeText}>{item.endTime || "-"}</AppText>
               </View>
-              <View
-                style={[
-                  styles.eventLine,
-                  { backgroundColor: item.subject?.color || colors.primary },
-                ]}
-              />
+              <View style={[styles.eventLine, { backgroundColor: item.subject?.color || colors.primary }]} />
               <View style={styles.eventCopy}>
-                <AppText style={styles.eventTitle}>
-                  {item.subject?.name || "Mata pelajaran"}
-                </AppText>
-                <AppText style={styles.eventSub}>
-                  {item.room || "Jadwal sekolah"}
-                </AppText>
+                <AppText style={styles.eventTitle}>{item.subject?.name || "Mata pelajaran"}</AppText>
+                <AppText style={styles.eventSub}>{item.room || "Jadwal sekolah"}</AppText>
               </View>
-              <Pressable
-                accessibilityLabel="Hapus jadwal"
-                onPress={() => onDeleteSchedule(item)}
-                hitSlop={8}
-              >
+              <Pressable accessibilityLabel="Hapus jadwal" onPress={() => onDeleteSchedule(item)} hitSlop={8}>
                 <Trash2 size={15} color="#94A3B8" />
               </Pressable>
             </View>
@@ -138,9 +135,7 @@ export default function CalendarScreen({
         ) : (
           <View style={styles.emptyRow}>
             <BookOpen size={18} color="#94A3B8" />
-            <AppText style={styles.emptyText}>
-              Belum ada jadwal pelajaran untuk hari {day}.
-            </AppText>
+            <AppText style={styles.emptyText}>Belum ada jadwal pelajaran untuk hari {day}.</AppText>
           </View>
         )}
         <Button
@@ -154,9 +149,9 @@ export default function CalendarScreen({
       </Card>
       {mode === "integrated" ? (
         <Card style={styles.listCard}>
-          <SectionTitle>SESI FOKUS HARI INI</SectionTitle>
+          <SectionTitle>{focusSectionTitle}</SectionTitle>
           {loading && !safeSessions.length ? (
-            <Loading label="Memuat sesi fokus hari ini..." compact />
+            <Loading label={`Memuat sesi fokus hari ${day}...`} compact />
           ) : daySessions.length ? (
             daySessions.map((item) => (
               <View key={item.id} style={styles.sessionRow}>
@@ -164,9 +159,7 @@ export default function CalendarScreen({
                   <Clock3 size={16} color={colors.primary} />
                 </View>
                 <View style={styles.eventCopy}>
-                  <AppText style={styles.eventTitle}>
-                    {item.task?.title || "Sesi belajar"}
-                  </AppText>
+                  <AppText style={styles.eventTitle}>{item.task?.title || "Sesi belajar"}</AppText>
                   <AppText style={styles.eventSub}>
                     {item.startTime || "-"} · {item.durationMinutes || 45} menit
                   </AppText>
@@ -179,7 +172,7 @@ export default function CalendarScreen({
           ) : (
             <EmptyState
               icon={CalendarDays}
-              title="Belum Ada Sesi Belajar"
+              title={`Belum Ada Sesi Belajar (${day})`}
               subtitle="Buat rekomendasi jadwal dari tab Rencana AI."
             />
           )}
@@ -190,9 +183,7 @@ export default function CalendarScreen({
           <CalendarDays size={19} color="#fff" />
         </View>
         <View style={styles.recommendationCopy}>
-          <AppText style={styles.recommendationTitle}>
-            Rekomendasi Prioritas Belajar AI
-          </AppText>
+          <AppText style={styles.recommendationTitle}>Rekomendasi Prioritas Belajar AI</AppText>
           <AppText style={styles.recommendationSub}>
             {safeSubjects.length
               ? "Gunakan Rencana AI untuk melihat sesi belajarmu."
@@ -207,97 +198,28 @@ export default function CalendarScreen({
 const styles = StyleSheet.create({
   modeRow: { flexDirection: "row", gap: 8 },
   week: { flexDirection: "row", justifyContent: "space-between", gap: 6 },
-  dayButton: {
-    flex: 1,
-    height: 58,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dayButtonActive: {
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  dayShort: {
-    color: "#94A3B8",
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 9,
-  },
-  dayName: {
-    color: "#475569",
-    fontFamily: "Poppins_700Bold",
-    fontSize: 8,
-    marginTop: 2,
-  },
+  dayButton: { flex: 1, height: 58, borderRadius: 16, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  dayButtonActive: { backgroundColor: colors.primary, shadowColor: colors.primary, shadowOpacity: 0.22, shadowRadius: 8, elevation: 3 },
+  dayShort: { color: "#94A3B8", fontFamily: "Poppins_600SemiBold", fontSize: 9 },
+  dayName: { color: "#475569", fontFamily: "Poppins_700Bold", fontSize: 8, marginTop: 2 },
   dayActive: { color: "#fff" },
   listCard: { gap: 14 },
-  eventRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    minHeight: 52,
-    borderTopWidth: 1,
-    borderColor: "#F1F5F9",
-    paddingTop: 9,
-  },
+  eventRow: { flexDirection: "row", alignItems: "center", gap: 9, minHeight: 52, borderTopWidth: 1, borderColor: "#F1F5F9", paddingTop: 9 },
   time: { width: 49, alignItems: "flex-end" },
-  timeText: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 8,
-    color: "#475569",
-  },
+  timeText: { fontFamily: "Poppins_600SemiBold", fontSize: 8, color: "#475569" },
   timeDash: { fontSize: 7, color: "#94A3B8", lineHeight: 8 },
   eventLine: { width: 3, height: 35, borderRadius: 2 },
   eventCopy: { flex: 1 },
   eventTitle: { fontFamily: "Poppins_600SemiBold", fontSize: 10 },
   eventSub: { color: colors.muted, fontSize: 8, marginTop: 3 },
-  emptyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
-  },
+  emptyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10 },
   emptyText: { flex: 1, color: colors.muted, fontSize: 9 },
   addButton: { marginTop: 2 },
-  sessionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderTopWidth: 1,
-    borderColor: "#F1F5F9",
-    paddingTop: 11,
-  },
-  sessionIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 16,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  focus: {
-    color: colors.primary,
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 9,
-  },
-  recommendation: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#F4F7FF",
-  },
-  recommendationIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  sessionRow: { flexDirection: "row", alignItems: "center", gap: 10, borderTopWidth: 1, borderColor: "#F1F5F9", paddingTop: 11 },
+  sessionIcon: { width: 34, height: 34, borderRadius: 16, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+  focus: { color: colors.primary, fontFamily: "Poppins_600SemiBold", fontSize: 9 },
+  recommendation: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#F4F7FF" },
+  recommendationIcon: { width: 38, height: 38, borderRadius: 16, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
   recommendationCopy: { flex: 1 },
   recommendationTitle: { fontFamily: "Poppins_700Bold", fontSize: 10 },
   recommendationSub: { color: colors.muted, fontSize: 9, marginTop: 3 },

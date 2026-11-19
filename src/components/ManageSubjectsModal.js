@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { BookOpen, Check, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import ModalSheet from './ModalSheet';
 import { AppText, Button, Field, Pill } from './ui';
 import { colors } from '../constants/theme';
+import { useDialog } from '../context/DialogContext';
 
 const palette = ['#0062FF', '#4F46E5', '#059669', '#D97706', '#E11D48', '#0891B2'];
 
@@ -24,7 +25,17 @@ export default function ManageSubjectsModal({ visible, onClose, subjects, onCrea
       setEditing(null); setName('');
     } finally { setBusy(false); }
   };
-  const confirmDelete = (subject) => Alert.alert('Hapus mata pelajaran?', `Mata pelajaran ${subject.name} akan dihapus.`, [{ text: 'Batal', style: 'cancel' }, { text: 'Hapus', style: 'destructive', onPress: () => onDelete(subject.id) }]);
+  const { showDialog } = useDialog();
+  const confirmDelete = (subject) =>
+    showDialog({
+      title: 'Hapus mata pelajaran?',
+      message: `Mata pelajaran ${subject.name} akan dihapus.`,
+      type: 'danger',
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      showCancel: true,
+      onConfirm: () => onDelete(subject.id),
+    });
   return <ModalSheet visible={visible} title="Kelola Mata Pelajaran" subtitle={`${subjects.length} mata pelajaran tersimpan`} onClose={onClose} icon={BookOpen}>
     <View style={styles.list}>{subjects.map((subject) => <View key={subject.id} style={styles.subjectRow}><View style={[styles.dot, { backgroundColor: subject.color || colors.primary }]} /><View style={styles.subjectCopy}><AppText style={styles.subjectName}>{subject.name}</AppText><AppText style={styles.subjectInfo}>Kesulitan {subject.difficulty || 3}/5</AppText></View><Pressable onPress={() => startEdit(subject)} hitSlop={8} style={styles.iconButton}><Pencil size={15} color={colors.primary} /></Pressable><Pressable onPress={() => confirmDelete(subject)} hitSlop={8} style={styles.iconButton}><Trash2 size={15} color={colors.danger} /></Pressable></View>)}{!subjects.length ? <View style={styles.empty}><BookOpen size={22} color="#94A3B8" /><AppText style={styles.emptyText}>Belum ada mata pelajaran. Tambahkan untuk mengelola tugas dan jadwal.</AppText></View> : null}</View>
     <View style={styles.formTitle}><AppText style={styles.formHeading}>{editing ? 'Ubah Mata Pelajaran' : 'Tambah Mata Pelajaran'}</AppText>{editing ? <Pressable onPress={() => { setEditing(null); setName(''); }}><AppText style={styles.cancel}>Batal edit</AppText></Pressable> : null}</View>

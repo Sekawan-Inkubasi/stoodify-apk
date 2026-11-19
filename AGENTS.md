@@ -29,8 +29,11 @@ Agent wajib membedakan secara tegas antara **fakta yang telah terbukti di kode a
 - **Framework:** React Native `0.88.1` dengan Expo SDK `~58.0.23`, React `19.3.0`.
 - **Bentuk Arsitektur Saat Ini:** UI utama React Native dengan lima tab native dan service REST langsung ke backend. `react-native-webview` hanya dipakai sebagai fallback web eksplisit.
 - **Fitur Mobile yang Sudah Aktif:**
-  - Login/registrasi native, token di Expo SecureStore, refresh token, dan logout.
-  - Layar Beranda, Tugas, Kalender, Rencana AI, Profil, drawer asisten, dan modal native.
+  - Login/registrasi native, token persisten di Expo SecureStore (`await setTokensAsync`), proactive refresh sebelum expired (<90s), rotasi refresh token, dan background/foreground `AppState` auto-sync.
+  - Layar Beranda, Tugas, Kalender, Rencana AI, Profil, drawer asisten AI, dan modal native.
+  - Stoodify Design System Dialogs (`CustomAlertDialog.js` & `DialogContext.js`) menggantikan seluruh `Alert.alert` bawaan OS (`radii.card = 16`, Poppins font, tinted badge icon, dark backdrop overlay `rgba(15, 23, 42, 0.65)`).
+  - AI Assistant ChatDrawer: layout anti-overlap, backdrop overlay, dan Android keyboard avoidance (`KeyboardAvoidingView` + offset listener).
+  - Kalender: pemetaan hari dinamis ke tanggal nyata minggu aktif (`resolveDateForDay`), judul dinamis kontekstual, dan deduplikasi sesi fokus.
   - Kamera native (`expo-camera`), pemilih gambar/dokumen, dan unggah avatar.
   - Penanganan safe area dan hardware back button Android.
 - **Native Generation & Build System:**

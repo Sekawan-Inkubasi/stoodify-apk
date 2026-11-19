@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,40 +12,27 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import {
-  Bot,
-  Camera,
-  ChevronLeft,
-  Lightbulb,
-  RotateCcw,
-  Send,
-  Sparkles,
-  X,
-} from "lucide-react-native";
+import { Bot, RotateCcw, Send, Sparkles, X } from "lucide-react-native";
 import { AppText } from "./ui";
 import { colors } from "../constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-const prompts = [
-  "Susun prioritas",
-  "Ringkasan beban belajar",
-  "Tips mode fokus 45 menit",
-  "Prediksi materi",
-];
+import {
+  ASSISTANT_PROMPTS,
+  generateAssistantReply,
+} from "../services/aiChatService";
 
 export default function ChatDrawer({
   visible,
   onClose,
   user,
-  tasks,
-  sessions,
+  tasks = [],
+  sessions = [],
   onReschedule,
   onFocus,
-  showMessage,
 }) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const drawerWidth = Math.min(Math.round(screenWidth * 0.84), 390);
+  const drawerWidth = Math.min(Math.round(screenWidth * 0.86), 390);
 
   const [isOpen, setIsOpen] = useState(visible);
   const isClosing = useRef(false);
@@ -57,10 +47,25 @@ export default function ChatDrawer({
   ]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const timer = useRef(null);
   const list = useRef(null);
 
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return undefined;
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardOffset(e.endCoordinates?.height || 0);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardOffset(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -86,6 +91,7 @@ export default function ChatDrawer({
   const handleClose = () => {
     if (isClosing.current) return;
     isClosing.current = true;
+    Keyboard.dismiss();
     Animated.timing(slideAnim, {
       toValue: drawerWidth,
       duration: 200,
@@ -99,65 +105,20 @@ export default function ChatDrawer({
 
   const send = (text = input) => {
     if (!text.trim() || thinking) return;
-    const userMessage = {
-      id: `u-${Date.now()}`,
-      sender: "user",
-      text: text.trim(),
-    };
+    const userMessage = { id: `u-${Date.now()}`, sender: "user", text: text.trim() };
     setMessages((items) => [...items, userMessage]);
     setInput("");
     setThinking(true);
     timer.current = setTimeout(() => {
-      const lower = text.toLowerCase();
-      let reply = `Baik ${user?.name?.split(" ")[0] || "Siswa"}! Saya sudah meninjau data belajar yang tersedia di aplikasi.`;
-      let action = null;
-      if (
-        lower.includes("susun") ||
-        lower.includes("jadwal") ||
-        lower.includes("prioritas")
-      ) {
-        reply = sessions.length
-          ? `Ada ${sessions.length} sesi belajar yang tersimpan. Kamu dapat meminta backend menyusun ulang prioritas belajar.`
-          : "Belum ada sesi tugas aktif. Tambahkan tugas terlebih dahulu agar jadwal belajar dapat disusun.";
-        action = "reschedule";
-      } else if (
-        lower.includes("ringkasan") ||
-        lower.includes("beban") ||
-        lower.includes("tugas")
-      ) {
-        reply = `Saat ini ada ${tasks.filter((task) => task.status !== "selesai").length} tugas aktif dan ${sessions.length} sesi belajar. Buka tab Tugas untuk melihat detailnya.`;
-      } else if (
-        lower.includes("fokus") ||
-        lower.includes("timer") ||
-        lower.includes("tips")
-      ) {
-        reply =
-          "Coba jauhkan distraksi, siapkan air minum, lalu fokus selama 25 atau 45 menit. Kamu bisa mulai timer Zen Focus sekarang.";
-        action = "focus";
-      } else if (lower.includes("prediksi")) {
-        reply =
-          "Prediksi materi tersedia melalui layanan AI backend. Buka tombol Prediksi Materi dari Beranda untuk memulai.";
-      } else {
-        reply = tasks.length
-          ? `Saya siap membantu membahas tugas “${tasks.find((task) => task.status !== "selesai")?.title || tasks[0].title}” atau merencanakan waktu belajarmu.`
-          : "Saya siap membantu menjawab pertanyaan belajar atau merencanakan jadwal. Tambahkan tugas agar saran lebih sesuai dengan datamu.";
-      }
-      setMessages((items) => [
-        ...items,
-        { id: `a-${Date.now()}`, sender: "ai", text: reply, action },
-      ]);
+      const { reply, action } = generateAssistantReply(text, { user, tasks, sessions });
+      setMessages((items) => [...items, { id: `a-${Date.now()}`, sender: "ai", text: reply, action }]);
       setThinking(false);
-    }, 650);
+    }, 550);
   };
 
-  const reset = () =>
-    setMessages([
-      {
-        id: `welcome-${Date.now()}`,
-        sender: "ai",
-        text: "Percakapan baru dimulai. Ada yang bisa saya bantu?",
-      },
-    ]);
+  const reset = () => {
+    setMessages([{ id: `welcome-${Date.now()}`, sender: "ai", text: "Percakapan baru dimulai. Ada yang bisa saya bantu?" }]);
+  };
 
   const backdropOpacity = slideAnim.interpolate({
     inputRange: [0, drawerWidth],
@@ -166,211 +127,109 @@ export default function ChatDrawer({
   });
 
   return (
-    <Modal
-      visible={isOpen}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={handleClose}
-    >
+    <Modal visible={isOpen} transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={handleClose}
-            accessibilityLabel="Tutup asisten"
-          />
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} accessibilityLabel="Tutup asisten" />
         </Animated.View>
 
-        <Animated.View
-          style={[
-            styles.drawer,
-            { width: drawerWidth, transform: [{ translateX: slideAnim }] },
-          ]}
-        >
-          <View
-            style={[
-              styles.header,
-              { paddingTop: Math.max(12, insets.top + 6) },
-            ]}
-          >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Tutup asisten"
-              onPress={handleClose}
-              style={styles.headerButton}
-            >
-              <ChevronLeft size={18} color="#fff" strokeWidth={2.5} />
-            </Pressable>
-            <View style={styles.botAvatarWrap}>
-              <View style={styles.botIcon}>
-                <Bot size={17} color="#fff" />
-              </View>
-              <View style={styles.onlineBadgeDot} />
-            </View>
-            <View style={styles.headerCopy}>
-              <View style={styles.titleRow}>
-                <AppText numberOfLines={1} style={styles.heading}>
-                  Stoodify AI Assistant
-                </AppText>
-                <View style={styles.smartBadge}>
-                  <AppText style={styles.smartBadgeText}>Smart AI</AppText>
+        <Animated.View style={[styles.drawer, { width: drawerWidth, transform: [{ translateX: slideAnim }] }]}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboardContainer}>
+            {/* Header Anti-Overlap */}
+            <View style={[styles.header, { paddingTop: Math.max(14, insets.top + 8) }]}>
+              <View style={styles.headerLeft}>
+                <View style={styles.botIcon}>
+                  <Bot size={18} color="#fff" />
+                  <View style={styles.onlineDot} />
+                </View>
+                <View style={styles.headerTitles}>
+                  <AppText style={styles.heading} numberOfLines={1}>Stoodify AI</AppText>
+                  <View style={styles.badgeRow}>
+                    <View style={styles.smartBadge}>
+                      <Sparkles size={10} color={colors.primary} />
+                      <AppText style={styles.smartBadgeText}>AI Aktif</AppText>
+                    </View>
+                  </View>
                 </View>
               </View>
-              <View style={styles.statusRow}>
-                <View style={styles.statusDot} />
-                <AppText numberOfLines={1} style={styles.onlineText}>
-                  Online · Siap membantumu 24/7
-                </AppText>
+
+              <View style={styles.headerRight}>
+                <Pressable accessibilityLabel="Reset percakapan" onPress={reset} hitSlop={8} style={styles.iconBtn}>
+                  <RotateCcw size={16} color="#fff" />
+                </Pressable>
+                <Pressable accessibilityLabel="Tutup asisten" onPress={handleClose} hitSlop={8} style={styles.iconBtn}>
+                  <X size={18} color="#fff" />
+                </Pressable>
               </View>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Mulai percakapan baru"
-              onPress={reset}
-              style={styles.headerButton}
-            >
-              <RotateCcw size={15} color="#fff" strokeWidth={2.2} />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Tutup asisten"
-              onPress={handleClose}
-              style={styles.headerButton}
-            >
-              <X size={16} color="#fff" strokeWidth={2.4} />
-            </Pressable>
-          </View>
 
-          <ScrollView
-            ref={list}
-            onContentSizeChange={() =>
-              list.current?.scrollToEnd({ animated: true })
-            }
-            contentContainerStyle={styles.messages}
-            keyboardShouldPersistTaps="handled"
-          >
-            {messages.map((message) => (
-              <View
-                key={message.id}
-                style={[
-                  styles.messageRow,
-                  message.sender === "user" && styles.userRow,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.message,
-                    message.sender === "user" && styles.userMessage,
-                  ]}
-                >
-                  <AppText
-                    style={[
-                      styles.messageText,
-                      message.sender === "user" && styles.userText,
-                    ]}
-                  >
-                    {message.text}
-                  </AppText>
-                  {message.action ? (
-                    <Pressable
-                      onPress={() =>
-                        message.action === "reschedule"
-                          ? onReschedule()
-                          : onFocus()
-                      }
-                      style={styles.action}
-                    >
-                      <AppText style={styles.actionText}>
-                        {message.action === "reschedule"
-                          ? "Jalankan Adaptive Rescheduling"
-                          : "Buka Zen Focus Timer"}
-                      </AppText>
+            {/* Chat Messages */}
+            <ScrollView
+              ref={list}
+              onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
+              contentContainerStyle={styles.messages}
+              keyboardShouldPersistTaps="handled"
+            >
+              {messages.map((message) => (
+                <View key={message.id} style={[styles.messageRow, message.sender === "user" && styles.userRow]}>
+                  <View style={[styles.message, message.sender === "user" && styles.userMessage]}>
+                    <AppText style={[styles.messageText, message.sender === "user" && styles.userText]}>
+                      {message.text}
+                    </AppText>
+                    {message.action ? (
+                      <Pressable
+                        onPress={() => (message.action === "reschedule" ? onReschedule() : onFocus())}
+                        style={styles.actionBtn}
+                      >
+                        <AppText style={styles.actionBtnText}>
+                          {message.action === "reschedule" ? "Jalankan Adaptive Rescheduling" : "Buka Zen Focus Timer"}
+                        </AppText>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+              {thinking ? <AppText style={styles.typing}>Stoodify sedang menganalisis…</AppText> : null}
+              {!messages.some((item) => item.sender === "user") ? (
+                <View style={styles.promptsWrap}>
+                  {ASSISTANT_PROMPTS.map((prompt) => (
+                    <Pressable key={prompt} onPress={() => send(prompt)} style={styles.promptChip}>
+                      <Sparkles size={11} color={colors.primary} />
+                      <AppText style={styles.promptText}>{prompt}</AppText>
                     </Pressable>
-                  ) : null}
+                  ))}
                 </View>
-              </View>
-            ))}
-            {thinking ? (
-              <AppText style={styles.typing}>
-                Stoodify sedang menganalisis…
-              </AppText>
-            ) : null}
-            {!messages.some((item) => item.sender === "user") ? (
-              <View style={styles.prompts}>
-                {prompts.map((prompt) => (
-                  <Pressable
-                    key={prompt}
-                    onPress={() => send(prompt)}
-                    style={styles.prompt}
-                  >
-                    <Sparkles size={12} color={colors.primary} />
-                    <AppText style={styles.promptText}>{prompt}</AppText>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-          </ScrollView>
+              ) : null}
+            </ScrollView>
 
-          <View
-            style={[
-              styles.inputDock,
-              { paddingBottom: Math.max(10, insets.bottom + 6) },
-            ]}
-          >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Buka kamera tugas"
-              onPress={() =>
-                showMessage(
-                  "Fitur scan soal menampilkan pratinjau kamera tugas. Analisis foto belum tersedia melalui endpoint chat.",
-                  "Scan Soal & PR",
-                )
-              }
-              style={styles.toolButton}
-            >
-              <Camera size={16} color="#64748B" />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Kirim pertanyaan contoh tentang prioritas"
-              onPress={() =>
-                send(
-                  "Bagaimana tips menyusun prioritas tugas belajar hari ini?",
-                )
-              }
-              style={styles.toolButton}
-            >
-              <Lightbulb size={16} color="#64748B" />
-            </Pressable>
-            <TextInput
-              value={input}
-              onChangeText={setInput}
-              onSubmitEditing={() => send()}
-              placeholder="Tanya materi, PR, atau jadwal..."
-              placeholderTextColor="#64748B"
-              returnKeyType="send"
-              style={styles.input}
-            />
-            <Pressable
-              onPress={() => send()}
-              disabled={!input.trim() || thinking}
+            {/* Input Dock with Android Keyboard Offset */}
+            <View
               style={[
-                styles.send,
-                (!input.trim() || thinking) && styles.sendDisabled,
+                styles.inputDock,
+                { paddingBottom: Math.max(12, keyboardOffset > 0 ? keyboardOffset + 8 : insets.bottom + 10) },
               ]}
             >
-              <Send size={15} color="#fff" />
-            </Pressable>
-          </View>
-          <AppText
-            style={[
-              styles.disclaimer,
-              { paddingBottom: Math.max(8, insets.bottom) },
-            ]}
-          >
-            Jawaban berdasarkan fitur Stoodify yang tersedia saat ini.
-          </AppText>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  value={input}
+                  onChangeText={setInput}
+                  placeholder="Tanya asisten AI..."
+                  placeholderTextColor="#94A3B8"
+                  style={styles.input}
+                  onSubmitEditing={() => send()}
+                  returnKeyType="send"
+                />
+                <Pressable
+                  accessibilityLabel="Kirim pesan"
+                  onPress={() => send()}
+                  disabled={!input.trim() || thinking}
+                  style={[styles.sendBtn, (!input.trim() || thinking) && styles.sendBtnDisabled]}
+                >
+                  <Send size={15} color="#fff" />
+                </Pressable>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
         </Animated.View>
       </View>
     </Modal>
@@ -379,176 +238,36 @@ export default function ChatDrawer({
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, flexDirection: "row", justifyContent: "flex-end" },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
-  },
-  drawer: {
-    height: "100%",
-    backgroundColor: "#F8FAFC",
-    borderTopLeftRadius: 22,
-    borderBottomLeftRadius: 22,
-    overflow: "hidden",
-    elevation: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: -4, height: 0 },
-  },
-  header: {
-    backgroundColor: colors.primaryDark,
-    paddingBottom: 12,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderBottomWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  headerButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  botAvatarWrap: { position: "relative" },
-  botIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(255, 255, 255, 0.22)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  onlineBadgeDot: {
-    position: "absolute",
-    right: -1,
-    bottom: -1,
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: "#22C55E",
-    borderWidth: 1.5,
-    borderColor: colors.primaryDark,
-  },
-  headerCopy: { flex: 1 },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  heading: { fontFamily: "Poppins_700Bold", fontSize: 11, color: "#FFFFFF" },
-  smartBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.22)",
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 8,
-  },
-  smartBadgeText: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 8,
-    color: "#FFFFFF",
-  },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 2,
-  },
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: "#22C55E",
-  },
-  onlineText: { fontSize: 8.5, color: "#DCE8FF" },
-  messages: { flexGrow: 1, padding: 14, gap: 9 },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(15, 23, 42, 0.65)" },
+  drawer: { height: "100%", backgroundColor: "#F8FAFC", borderTopLeftRadius: 20, borderBottomLeftRadius: 20, overflow: "hidden", elevation: 20 },
+  keyboardContainer: { flex: 1 },
+  header: { backgroundColor: colors.primaryDark, paddingHorizontal: 14, paddingBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  headerLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, marginRight: 8 },
+  botIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255, 255, 255, 0.2)", alignItems: "center", justifyContent: "center", position: "relative" },
+  onlineDot: { position: "absolute", right: 0, bottom: 0, width: 9, height: 9, borderRadius: 5, backgroundColor: "#10B981", borderWidth: 1.5, borderColor: colors.primaryDark },
+  headerTitles: { flex: 1 },
+  heading: { color: "#fff", fontFamily: "Poppins_700Bold", fontSize: 14 },
+  badgeRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  smartBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFFFFF", paddingHorizontal: 7, paddingVertical: 1, borderRadius: 6 },
+  smartBadgeText: { color: colors.primary, fontFamily: "Poppins_700Bold", fontSize: 8 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  iconBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255, 255, 255, 0.15)", alignItems: "center", justifyContent: "center" },
+  messages: { padding: 14, gap: 10 },
   messageRow: { flexDirection: "row", justifyContent: "flex-start" },
   userRow: { justifyContent: "flex-end" },
-  message: {
-    maxWidth: "86%",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 17,
-    borderTopLeftRadius: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  userMessage: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-    borderTopLeftRadius: 17,
-    borderTopRightRadius: 5,
-  },
-  messageText: { color: "#334155", fontSize: 10, lineHeight: 16 },
-  userText: { color: "#fff" },
-  action: {
-    marginTop: 10,
-    borderRadius: 16,
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  actionText: {
-    color: colors.primary,
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 9,
-  },
-  typing: { color: colors.muted, fontSize: 9, paddingLeft: 4 },
-  prompts: { gap: 7, marginTop: 8 },
-  prompt: {
-    minHeight: 44,
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#DCE7F9",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 18,
-  },
-  promptText: { color: "#475569", fontSize: 9 },
-  inputDock: {
-    flexDirection: "row",
-    gap: 6,
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  toolButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  input: {
-    flex: 1,
-    minHeight: 38,
-    borderRadius: 22,
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 12,
-    fontSize: 10,
-    color: colors.ink,
-  },
-  send: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sendDisabled: { opacity: 0.45 },
-  disclaimer: {
-    color: "#64748B",
-    textAlign: "center",
-    backgroundColor: "#fff",
-    fontSize: 8,
-    paddingBottom: 8,
-  },
+  message: { maxWidth: "84%", backgroundColor: "#FFFFFF", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: "#E2E8F0" },
+  userMessage: { backgroundColor: colors.primary, borderColor: colors.primary },
+  messageText: { fontSize: 12, lineHeight: 18, color: colors.ink, fontFamily: "Poppins_400Regular" },
+  userText: { color: "#FFFFFF" },
+  actionBtn: { marginTop: 8, backgroundColor: "#EFF6FF", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  actionBtnText: { fontSize: 10, fontFamily: "Poppins_600SemiBold", color: colors.primary },
+  typing: { fontSize: 11, color: colors.muted, fontStyle: "italic", paddingHorizontal: 4 },
+  promptsWrap: { gap: 6, marginTop: 8 },
+  promptChip: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", paddingHorizontal: 11, paddingVertical: 8, borderRadius: 10 },
+  promptText: { fontSize: 11, color: colors.ink, fontFamily: "Poppins_500Medium" },
+  inputDock: { paddingHorizontal: 12, paddingTop: 8, backgroundColor: "#FFFFFF", borderTopWidth: 1, borderColor: "#E2E8F0" },
+  inputWrap: { flexDirection: "row", alignItems: "center", backgroundColor: "#F1F5F9", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
+  input: { flex: 1, minHeight: 38, fontSize: 12, color: colors.ink, fontFamily: "Poppins_400Regular" },
+  sendBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  sendBtnDisabled: { opacity: 0.4 },
 });

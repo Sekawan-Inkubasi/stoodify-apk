@@ -1,5 +1,12 @@
 import { API_BASE_URL, API_TIMEOUT_MS } from '../constants/config';
-import { getAccessToken, getRefreshToken, setTokens, clearTokens } from './tokenStorage';
+import { ENDPOINTS } from '../constants/apiEndpoints';
+import {
+  getAccessToken,
+  getRefreshToken,
+  setTokensAsync,
+  clearTokensAsync,
+  isTokenExpiringSoon,
+} from './tokenStorage';
 
 /**
  * Native Fetch HTTP Client untuk Stoodify Mobile
@@ -26,12 +33,13 @@ export async function performTokenRefresh() {
   refreshPromise = (async () => {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
-      clearTokens();
+      await clearTokensAsync();
       return null;
     }
 
     try {
-      const url = `${API_BASE_URL.replace(/\/+$/, '')}/auth/refresh`;
+      const refreshPath = ENDPOINTS.AUTH_REFRESH.replace(/^\/+/, '');
+      const url = `${API_BASE_URL.replace(/\/+$/, '')}/${refreshPath}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -44,7 +52,7 @@ export async function performTokenRefresh() {
       const data = await response.json().catch(() => null);
 
       if (response.ok && data?.success && data?.data?.access_token) {
-        setTokens({
+        await setTokensAsync({
           accessToken: data.data.access_token,
           refreshToken: data.data.refresh_token || refreshToken,
         });
@@ -53,7 +61,7 @@ export async function performTokenRefresh() {
 
       // Hanya hapus sesi jika backend secara eksplisit menyatakan refresh token tidak valid / revoked (401 / 403)
       if (response.status === 401 || response.status === 403) {
-        clearTokens();
+        await clearTokensAsync();
       }
       return null;
     } catch {
@@ -68,6 +76,11 @@ export async function performTokenRefresh() {
 }
 
 export async function request(endpoint, options = {}) {
+  // Penyegaran proaktif: jika access token mendekati kedaluwarsa (<90s), segarkan sebelum request dikirim
+  if (!options._retry && !isPublicAuthEndpoint(endpoint) && isTokenExpiringSoon(90) && getRefreshToken()) {
+    await performTokenRefresh();
+  }
+
   const url = endpoint.startsWith('http')
     ? endpoint
     : `${API_BASE_URL.replace(/\/+$/, '')}/${endpoint.replace(/^\/+/, '')}`;

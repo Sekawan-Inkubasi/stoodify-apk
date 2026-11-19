@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import {
   CalendarDays,
   CheckCircle2,
@@ -11,6 +11,7 @@ import {
 import ModalSheet from "./ModalSheet";
 import { AppText, Button, Field } from "./ui";
 import { colors } from "../constants/theme";
+import { useDialog } from "../context/DialogContext";
 
 export default function TaskDetailModal({
   task,
@@ -24,17 +25,19 @@ export default function TaskDetailModal({
   onToggleSubtask,
 }) {
   const [subtaskTitle, setSubtaskTitle] = useState("");
+  const { showDialog } = useDialog();
   if (!task) return null;
   const done = task.status === "selesai";
   const remove = () =>
-    Alert.alert(
-      "Hapus tugas?",
-      `Tugas "${task.title}" akan dihapus dari database.`,
-      [
-        { text: "Batal", style: "cancel" },
-        { text: "Hapus", style: "destructive", onPress: () => onDelete(task) },
-      ],
-    );
+    showDialog({
+      title: "Hapus tugas?",
+      message: `Tugas "${task.title}" akan dihapus dari database.`,
+      type: "danger",
+      confirmText: "Hapus",
+      cancelText: "Batal",
+      showCancel: true,
+      onConfirm: () => onDelete(task),
+    });
   return (
     <ModalSheet
       visible={visible}

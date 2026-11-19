@@ -1,6 +1,6 @@
 import { apiGet, apiPost, apiPatch } from './apiClient';
 import { ENDPOINTS } from '../constants/apiEndpoints';
-import { setTokens, clearTokens, getStoredUser } from './tokenStorage';
+import { setTokensAsync, clearTokensAsync, getStoredUser } from './tokenStorage';
 
 const DEMO_CREDENTIALS = {
   name: 'Siswa Demo Stoodify',
@@ -15,7 +15,7 @@ export async function login(email, password) {
   });
 
   if (result?.success && result?.data?.access_token) {
-    setTokens({
+    await setTokensAsync({
       accessToken: result.data.access_token,
       refreshToken: result.data.refresh_token,
       user: result.data.user,
@@ -40,14 +40,14 @@ export async function logout() {
   } catch {
     // Logout server gagal tetap bersihkan sesi lokal
   } finally {
-    clearTokens();
+    await clearTokensAsync();
   }
 }
 
 export async function getMe() {
   const result = await apiGet(ENDPOINTS.AUTH_ME);
   if (result?.success && result?.data) {
-    setTokens({ user: result.data });
+    await setTokensAsync({ user: result.data });
   }
   return result?.data || getStoredUser();
 }
