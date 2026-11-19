@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Animated, BackHandler, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
 import { Bot, RotateCcw, Send, Sparkles, X } from "lucide-react-native";
 import { AppText } from "./ui";
+import MarkdownText from "./MarkdownText";
 import { colors } from "../constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ASSISTANT_PROMPTS, generateAssistantReply, sendChatMessage } from "../services/aiChatService";
@@ -196,9 +197,10 @@ export default function ChatDrawer({
               {messages.map((message) => (
                 <View key={message.id} style={[styles.messageRow, message.sender === "user" && styles.userRow]}>
                   <View style={[styles.message, message.sender === "user" && styles.userMessage]}>
-                    <AppText style={[styles.messageText, message.sender === "user" && styles.userText]}>
-                      {message.text}
-                    </AppText>
+                    <MarkdownText
+                      text={message.text}
+                      isUser={message.sender === "user"}
+                    />
                     {message.action ? (
                       <Pressable
                         onPress={() => (message.action === "reschedule" ? onReschedule() : onFocus())}
