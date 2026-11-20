@@ -62,13 +62,14 @@ function StoodifyApp() {
   useEffect(() => {
     if (Platform.OS !== 'android') return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!data.isLoggedIn) return false;
       if (chatVisible) { setChatVisible(false); return true; }
       if (webFallback) { setWebFallback(false); return true; }
       if (activeTab !== 'home') { setActiveTab('home'); return true; }
       return false;
     });
     return () => subscription.remove();
-  }, [activeTab, chatVisible, webFallback]);
+  }, [activeTab, chatVisible, data.isLoggedIn, webFallback]);
 
   useEffect(() => {
     tokenStorage.getHasSeenOnboarding().then((seen) => setHasSeenOnboarding(Boolean(seen)));
@@ -92,7 +93,11 @@ function StoodifyApp() {
       confirmText: 'Keluar',
       cancelText: 'Batal',
       showCancel: true,
-      onConfirm: data.logout,
+      onConfirm: () => {
+        setActiveTab('home');
+        setAuthInitialMode('welcome');
+        data.logout();
+      },
     });
   }, [data.logout, showDialog]);
   const handleDeleteSchedule = useCallback((item) => {

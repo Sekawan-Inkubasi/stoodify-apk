@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  BackHandler,
   KeyboardAvoidingView,
   Linking,
   NativeModules,
@@ -21,14 +22,10 @@ import { styles } from "./AuthScreen.styles";
 
 function isNativeGoogleSigninAvailable() {
   try {
-    if (NativeModules && NativeModules.RNGoogleSignin) return true;
-    if (TurboModuleRegistry && typeof TurboModuleRegistry.get === "function") {
-      return Boolean(TurboModuleRegistry.get("RNGoogleSignin"));
-    }
+    return Boolean(NativeModules?.RNGoogleSignin || TurboModuleRegistry?.get?.("RNGoogleSignin"));
   } catch {
     return false;
   }
-  return false;
 }
 
 function extractTokenFromUrl(url) {
@@ -168,6 +165,32 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
     }
   };
 
+  const handleBack = useCallback(() => {
+    setError("");
+    if (mode === "register") {
+      if (registerStep === 2) {
+        setRegisterStep(1);
+        return true;
+      }
+      if (registerStep === 3) {
+        setRegisterStep(1);
+        setMode("login");
+        return true;
+      }
+    }
+    if (mode !== "welcome") {
+      setMode("welcome");
+      return true;
+    }
+    return false;
+  }, [mode, registerStep]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return undefined;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => handleBack());
+    return () => subscription.remove();
+  }, [handleBack]);
+
   if (mode === "welcome") {
     return (
       <AuthWelcomeView
@@ -180,18 +203,6 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
     );
   }
 
-  const handleBack = () => {
-    setError("");
-    if (mode === "register") {
-      if (registerStep === 2) return setRegisterStep(1);
-      if (registerStep === 3) {
-        setRegisterStep(1);
-        return setMode("login");
-      }
-    }
-    setMode("welcome");
-  };
-
   return (
     <KeyboardAvoidingView
       style={styles.auth}
@@ -203,33 +214,22 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
         {mode === "register" ? (
           registerStep === 1 ? (
             <RegisterStepAccount
-              name={name}
-              setName={setName}
-              email={email}
-              setEmail={setEmail}
-              password={password}
-              setPassword={setPassword}
-              confirm={confirm}
-              setConfirm={setConfirm}
-              showPassword={showPassword}
-              setShowPassword={setShowPassword}
+              name={name} setName={setName}
+              email={email} setEmail={setEmail}
+              password={password} setPassword={setPassword}
+              confirm={confirm} setConfirm={setConfirm}
+              showPassword={showPassword} setShowPassword={setShowPassword}
               onNext={() => setRegisterStep(2)}
-              error={error}
-              setError={setError}
+              error={error} setError={setError}
             />
           ) : registerStep === 2 ? (
             <RegisterStepEducation
-              school={school}
-              setSchool={setSchool}
-              grade={grade}
-              setGrade={setGrade}
-              major={major}
-              setMajor={setMajor}
+              school={school} setSchool={setSchool}
+              grade={grade} setGrade={setGrade}
+              major={major} setMajor={setMajor}
               onBack={() => setRegisterStep(1)}
               onSubmit={handleRegisterSubmit}
-              busy={busy}
-              error={error}
-              setError={setError}
+              busy={busy} error={error} setError={setError}
             />
           ) : (
             <RegisterSuccessVerify
@@ -243,14 +243,10 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
           )
         ) : (
           <LoginForm
-            email={email}
-            setEmail={setEmail}
-            password={password}
-            setPassword={setPassword}
-            showPassword={showPassword}
-            setShowPassword={setShowPassword}
-            busy={busy}
-            error={error}
+            email={email} setEmail={setEmail}
+            password={password} setPassword={setPassword}
+            showPassword={showPassword} setShowPassword={setShowPassword}
+            busy={busy} error={error}
             onSubmit={handleLoginSubmit}
             onForgotPassword={() =>
               showMessage?.(

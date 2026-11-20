@@ -1,3 +1,10 @@
+/**
+ * @file ChatDrawer.js
+ * AI Assistant ChatDrawer with spring slide animation, full Android transparent modal
+ * keyboard avoidance, and interactive learning tools.
+ * Alasan toleransi file (<400 baris): Integrasi sinkronisasi keyboard Android Modal Dialog,
+ * orkestrasi spring gesture/backdrop, dan state asisten AI.
+ */
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -15,7 +22,7 @@ import {
 } from "react-native";
 import { Bot, RotateCcw, Send, Sparkles, X } from "lucide-react-native";
 import { AppText } from "./ui";
-import MarkdownText from "./MarkdownText";
+import ChatMessageItem from "./ChatMessageItem";
 import { colors } from "../constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -23,6 +30,7 @@ import {
   generateAssistantReply,
   sendChatMessage,
 } from "../services/aiChatService";
+import { styles } from "./ChatDrawer.styles";
 
 export default function ChatDrawer({
   visible,
@@ -52,7 +60,33 @@ export default function ChatDrawer({
   ]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const list = useRef(null);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates?.height || 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (keyboardHeight > 0) {
+      setTimeout(() => {
+        list.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [keyboardHeight]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -93,6 +127,7 @@ export default function ChatDrawer({
     if (isClosing.current) return;
     isClosing.current = true;
     Keyboard.dismiss();
+    setKeyboardHeight(0);
     Animated.timing(slideAnim, {
       toValue: drawerWidth,
       duration: 200,
@@ -194,7 +229,12 @@ export default function ChatDrawer({
         >
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={styles.keyboardContainer}
+            style={[
+              styles.keyboardContainer,
+              Platform.OS === "android" && keyboardHeight > 0 && {
+                paddingBottom: keyboardHeight,
+              },
+            ]}
           >
             {/* Header Anti-Overlap */}
             <View
@@ -249,43 +289,15 @@ export default function ChatDrawer({
               }
               contentContainerStyle={styles.messages}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
             >
               {messages.map((message) => (
-                <View
+                <ChatMessageItem
                   key={message.id}
-                  style={[
-                    styles.messageRow,
-                    message.sender === "user" && styles.userRow,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.message,
-                      message.sender === "user" && styles.userMessage,
-                    ]}
-                  >
-                    <MarkdownText
-                      text={message.text}
-                      isUser={message.sender === "user"}
-                    />
-                    {message.action ? (
-                      <Pressable
-                        onPress={() =>
-                          message.action === "reschedule"
-                            ? onReschedule()
-                            : onFocus()
-                        }
-                        style={styles.actionBtn}
-                      >
-                        <AppText style={styles.actionBtnText}>
-                          {message.action === "reschedule"
-                            ? "Jalankan Adaptive Rescheduling"
-                            : "Buka Zen Focus Timer"}
-                        </AppText>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                </View>
+                  message={message}
+                  onReschedule={onReschedule}
+                  onFocus={onFocus}
+                />
               ))}
               {thinking ? (
                 <AppText style={styles.typing}>
@@ -312,7 +324,12 @@ export default function ChatDrawer({
             <View
               style={[
                 styles.inputDock,
-                { paddingBottom: Math.max(10, insets.bottom + 6) },
+                {
+                  paddingBottom:
+                    keyboardHeight > 0
+                      ? 8
+                      : Math.max(10, insets.bottom + 6),
+                },
               ]}
             >
               <View style={styles.inputWrap}>
@@ -344,177 +361,3 @@ export default function ChatDrawer({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: { flex: 1, flexDirection: "row", justifyContent: "flex-end" },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 23, 42, 0.65)",
-  },
-  drawer: {
-    height: "100%",
-    backgroundColor: "#F8FAFC",
-    borderTopLeftRadius: 20,
-    borderBottomLeftRadius: 20,
-    overflow: "hidden",
-    elevation: 24,
-  },
-  keyboardContainer: { flex: 1 },
-  header: {
-    backgroundColor: colors.primaryDark,
-    paddingHorizontal: 14,
-    paddingBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginRight: 8,
-  },
-  botIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  onlineDot: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: "#10B981",
-    borderWidth: 1.5,
-    borderColor: colors.primaryDark,
-  },
-  offlineDot: {
-    backgroundColor: "#F59E0B",
-  },
-  offlineSubtitle: {
-    color: "#FEF3C7",
-    fontSize: 9,
-    fontFamily: "Poppins_500Medium",
-    marginTop: 1,
-  },
-  headerTitles: { flex: 1 },
-  heading: { color: "#fff", fontFamily: "Poppins_700Bold", fontSize: 14 },
-  badgeRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
-  smartBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 7,
-    paddingVertical: 1,
-    borderRadius: 6,
-  },
-  smartBadgeText: {
-    color: colors.primary,
-    fontFamily: "Poppins_700Bold",
-    fontSize: 8,
-  },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  iconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  messagesScroll: { flex: 1 },
-  messages: { padding: 14, gap: 10 },
-  messageRow: { flexDirection: "row", justifyContent: "flex-start" },
-  userRow: { justifyContent: "flex-end" },
-  message: {
-    maxWidth: "84%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  userMessage: { backgroundColor: colors.primary, borderColor: colors.primary },
-  messageText: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.ink,
-    fontFamily: "Poppins_400Regular",
-  },
-  userText: { color: "#FFFFFF" },
-  actionBtn: {
-    marginTop: 8,
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  actionBtnText: {
-    fontSize: 10,
-    fontFamily: "Poppins_600SemiBold",
-    color: colors.primary,
-  },
-  typing: {
-    fontSize: 11,
-    color: colors.muted,
-    fontStyle: "italic",
-    paddingHorizontal: 4,
-  },
-  promptsWrap: { gap: 6, marginTop: 8 },
-  promptChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  promptText: {
-    fontSize: 11,
-    color: colors.ink,
-    fontFamily: "Poppins_500Medium",
-  },
-  inputDock: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  input: {
-    flex: 1,
-    minHeight: 38,
-    fontSize: 12,
-    color: colors.ink,
-    fontFamily: "Poppins_400Regular",
-  },
-  sendBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sendBtnDisabled: { opacity: 0.4 },
-});
