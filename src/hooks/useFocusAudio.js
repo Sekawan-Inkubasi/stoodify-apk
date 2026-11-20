@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Vibration } from "react-native";
 
-// Resolve audio assets safely
+// Remote CDN audio URL for ambient focus music (streamed on-demand, not bundled into APK)
+const DEFAULT_REMOTE_AMBIENT_URL =
+  "https://res.cloudinary.com/hpukknei/video/upload/v1795132569/study-ambient.mp3";
+
+const ambientAudioSource = {
+  uri: process.env.EXPO_PUBLIC_AMBIENT_AUDIO_URL || DEFAULT_REMOTE_AMBIENT_URL,
+};
+
+// Resolve local audio assets (lightweight bell kept locally)
 let bellAsset = null;
-let ambientAsset = null;
 try {
   bellAsset = require("../../assets/sound/bell.mp3");
 } catch (e) {
   console.warn("[useFocusAudio] bell.mp3 asset not found:", e?.message);
-}
-try {
-  ambientAsset = require("../../assets/sound/study-ambient.mp3");
-} catch (e) {
-  console.warn("[useFocusAudio] study-ambient.mp3 asset not found:", e?.message);
 }
 
 // Safely require expo-audio to prevent crash if native module is not linked
@@ -45,8 +47,8 @@ export default function useFocusAudio({
     }
 
     try {
-      if (ambientAsset && !ambientPlayerRef.current) {
-        const player = expoAudioModule.createAudioPlayer(ambientAsset);
+      if (ambientAudioSource?.uri && !ambientPlayerRef.current) {
+        const player = expoAudioModule.createAudioPlayer(ambientAudioSource);
         player.loop = true;
         player.volume = 0.55;
         ambientPlayerRef.current = player;

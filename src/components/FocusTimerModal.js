@@ -110,7 +110,7 @@ export default function FocusTimerModal({
             </View>
           </View>
           <View style={styles.presets}>
-            {[25, 45, 60].map((minutes) => (
+            {[0.2, 45, 60].map((minutes) => (
               <Pill
                 key={minutes}
                 title={`${minutes}m`}
