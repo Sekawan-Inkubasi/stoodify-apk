@@ -22,6 +22,20 @@ import { API_BASE_URL } from '../constants/config';
 
 const initialUser = { name: 'Siswa', grade: 'SMA - Fase F', school: 'Stoodify', email: '', avatarUrl: null };
 
+function enrichSessionsWithTasks(sessionList, taskList) {
+  if (!Array.isArray(sessionList)) return [];
+  const map = new Map();
+  if (Array.isArray(taskList)) {
+    taskList.forEach((t) => { if (t?.id) map.set(String(t.id), t); });
+  }
+  return sessionList.map((s) => {
+    if (!s?.task && s?.taskId && map.has(String(s.taskId))) {
+      return { ...s, task: map.get(String(s.taskId)) };
+    }
+    return s;
+  });
+}
+
 export default function useAppData(showMessage) {
   const recommendationAttempts = useRef(new Set());
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -61,17 +75,16 @@ export default function useAppData(showMessage) {
       if (scheduleResult.status === 'fulfilled') setSchedules(Array.isArray(scheduleResult.value) ? scheduleResult.value.filter(Boolean) : []);
       if (sessionResult.status === 'fulfilled') {
         const loadedSessions = Array.isArray(sessionResult.value) ? sessionResult.value.filter(Boolean) : [];
-        setSessions(loadedSessions);
-        const activeTasks = taskResult.status === 'fulfilled' && Array.isArray(taskResult.value)
-          ? taskResult.value.filter((task) => task && task.status !== 'selesai')
-          : [];
+        const taskItems = taskResult.status === 'fulfilled' && Array.isArray(taskResult.value) ? taskResult.value : [];
+        setSessions(enrichSessionsWithTasks(loadedSessions, taskItems));
+        const activeTasks = taskItems.filter((task) => task && task.status !== 'selesai');
         const attemptKey = activeTasks.map((task) => task.id).sort().join(',');
         if (!loadedSessions.length && activeTasks.length && !recommendationAttempts.current.has(attemptKey)) {
           recommendationAttempts.current.add(attemptKey);
           try {
             const generated = await sessionsApi.generateScheduleRecommendations();
             if (generated?.sessions && Array.isArray(generated.sessions)) {
-              setSessions(generated.sessions.filter(Boolean));
+              setSessions(enrichSessionsWithTasks(generated.sessions.filter(Boolean), taskItems));
             }
           } catch { /* Keep the empty state available when recommendations cannot be generated. */ }
         }
@@ -107,13 +120,9 @@ export default function useAppData(showMessage) {
           if (me) {
             setUser({ ...initialUser, ...me, avatarUrl: me.avatar_url || me.avatarUrl || null });
             setIsLoggedIn(true);
-          } else if (!hasActiveSession()) {
-            clearTokens();
-          }
+          } else if (!hasActiveSession()) clearTokens();
         } catch {
-          if (!hasActiveSession()) {
-            clearTokens();
-          }
+          if (!hasActiveSession()) clearTokens();
         }
       }
       if (mounted) setAuthLoading(false);
@@ -215,15 +224,13 @@ export default function useAppData(showMessage) {
   }, [showMessage, sessions, syncSessionsAfterMutation]);
 
   const updateProgress = useCallback(async (task, progress) => {
-    const prevProgress = task.progressPercent || 0;
-    // Optimistic UI update immediately
+    const prev = task.progressPercent || 0;
     setTasks((items) => items.map((item) => (item.id === task.id ? { ...item, progressPercent: progress } : item)));
     try {
       const updated = await tasksApi.updateTaskProgress(task.id, progress);
       setTasks((items) => items.map((item) => (item.id === task.id ? { ...item, ...updated, progressPercent: progress } : item)));
     } catch (error) {
-      // Rollback on network failure
-      setTasks((items) => items.map((item) => (item.id === task.id ? { ...item, progressPercent: prevProgress } : item)));
+      setTasks((items) => items.map((item) => (item.id === task.id ? { ...item, progressPercent: prev } : item)));
       showMessage(error.message || 'Gagal memperbarui progres tugas.', 'Gagal Update Progres');
     }
   }, [showMessage]);
@@ -243,18 +250,15 @@ export default function useAppData(showMessage) {
     // Optimistic subtask toggle
     setTasks((items) => items.map((item) => {
       if (item.id !== task.id) return item;
-      const nextSubtasks = (item.subtasks || []).map((s) => s.id === subtask.id ? { ...s, completed: nextCompleted } : s);
-      return { ...item, subtasks: nextSubtasks };
+      return { ...item, subtasks: (item.subtasks || []).map((s) => s.id === subtask.id ? { ...s, completed: nextCompleted } : s) };
     }));
     try {
       await tasksApi.toggleSubtask(subtask.id, nextCompleted);
       await refreshTask(task.id);
     } catch (error) {
-      // Revert on error
       setTasks((items) => items.map((item) => {
         if (item.id !== task.id) return item;
-        const revSubtasks = (item.subtasks || []).map((s) => s.id === subtask.id ? { ...s, completed: !nextCompleted } : s);
-        return { ...item, subtasks: revSubtasks };
+        return { ...item, subtasks: (item.subtasks || []).map((s) => s.id === subtask.id ? { ...s, completed: !nextCompleted } : s) };
       }));
       showMessage(error.message || 'Gagal memperbarui subtugas.', 'Gagal Update Subtugas');
     }
@@ -291,19 +295,27 @@ export default function useAppData(showMessage) {
 
   const reschedule = useCallback(async () => {
     try {
-      const result = await sessionsApi.rescheduleSessions();
-      if (result?.sessions) setSessions(result.sessions);
+      let result;
+      try {
+        result = await sessionsApi.generateScheduleRecommendations();
+      } catch (genErr) {
+        if (genErr?.status === 429) throw genErr;
+        result = await sessionsApi.rescheduleSessions();
+      }
+      if (result?.sessions) {
+        setSessions(enrichSessionsWithTasks(result.sessions, tasks));
+      }
       showMessage(result?.message || 'Jadwal kamu sudah paling pas', 'Jadwal Belajar');
       return result;
     } catch (error) {
       if (error?.status === 502 || error?.status === 503) {
         showMessage('AI sedang sibuk. Jadwal lama tetap dipakai.', 'AI Sibuk');
-      } else {
+      } else if (error?.status !== 429) {
         showMessage(error.message || 'Jadwal belajar belum dapat disusun ulang.', 'Jadwal Belajar');
       }
       throw error;
     }
-  }, [showMessage]);
+  }, [showMessage, tasks]);
 
   const undoScheduleChange = useCallback(async (isExpired) => {
     if (isExpired) {

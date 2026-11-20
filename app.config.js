@@ -5,6 +5,13 @@ module.exports = ({ config }) => {
   const enabled = apiUrl.startsWith('http://');
   return {
     ...config,
-    plugins: [...(config.plugins || []), '@react-native-community/datetimepicker', 'expo-splash-screen', 'expo-audio', ['./plugins/withDevCleartext', { enabled }]],
+    plugins: [
+      ...(config.plugins || []),
+      '@react-native-community/datetimepicker',
+      'expo-splash-screen',
+      'expo-audio',
+      '@react-native-google-signin/google-signin',
+      ['./plugins/withDevCleartext', { enabled }],
+    ],
   };
 };

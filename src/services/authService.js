@@ -94,8 +94,32 @@ export async function loginDemo() {
   }
 }
 
+export async function loginWithGoogle(idToken) {
+  let result;
+  try {
+    result = await apiPost(ENDPOINTS.AUTH_GOOGLE, { id_token: idToken });
+  } catch (err) {
+    if (err?.status === 404 || err?.status === 405) {
+      result = await apiPost(ENDPOINTS.AUTH_LOGIN, { id_token: idToken });
+    } else {
+      throw err;
+    }
+  }
+
+  if (result?.success && result?.data?.access_token) {
+    await setTokensAsync({
+      accessToken: result.data.access_token,
+      refreshToken: result.data.refresh_token,
+      user: result.data.user,
+    });
+  }
+
+  return result;
+}
+
 export default {
   login,
+  loginWithGoogle,
   register,
   logout,
   getMe,

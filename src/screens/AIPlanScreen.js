@@ -42,16 +42,18 @@ export default function AIPlanScreen({
 
   const subjectMap = useMemo(() => {
     const map = new Map();
-    safeSubjects.forEach((s) => {
-      if (s?.id) map.set(String(s.id), s);
-    });
+    safeSubjects.forEach((s) => { if (s?.id) map.set(String(s.id), s); });
     return map;
   }, [safeSubjects]);
 
-  useEffect(() => {
-    return () => {
-      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
-    };
+  const taskMap = useMemo(() => {
+    const map = new Map();
+    safeTasks.forEach((t) => { if (t?.id) map.set(String(t.id), t); });
+    return map;
+  }, [safeTasks]);
+
+  useEffect(() => () => {
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
   }, []);
 
   const startCountdown = (seconds = 30) => {
@@ -211,14 +213,16 @@ export default function AIPlanScreen({
         <Loading label="Sedang menyusun jadwal belajar…" />
       ) : visible.length ? (
         visible.map((session, index) => {
+          const sessionTask = session.task || taskMap.get(String(session.taskId)) || null;
           const resolvedSubject =
-            session.task?.subject?.name ||
-            subjectMap.get(String(session.task?.subjectId))?.name ||
+            sessionTask?.subject?.name ||
+            subjectMap.get(String(sessionTask?.subjectId))?.name ||
             "Mata pelajaran";
+          const enrichedSession = session.task ? session : { ...session, task: sessionTask };
           return (
             <StudySessionCard
               key={session.id || String(index)}
-              session={session}
+              session={enrichedSession}
               index={index}
               subjectName={resolvedSubject}
               onFocus={onFocus}

@@ -2,7 +2,7 @@ import { apiGet, apiPost, apiPatch, apiDelete } from './apiClient';
 import { ENDPOINTS } from '../constants/apiEndpoints';
 import { mapTaskToUI } from './taskService';
 
-export function mapSessionToUI(session) {
+export function mapSessionToUI(session, taskMap = null) {
   if (!session) return null;
 
   const dateMatch = session.session_date ? String(session.session_date).match(/^(\d{4}-\d{2}-\d{2})/) : null;
@@ -12,20 +12,26 @@ export function mapSessionToUI(session) {
     ? new Date(session.session_date).toISOString().split('T')[0]
     : '';
 
+  const taskIdStr = String(session.task_id || session.taskId || '');
+  let resolvedTask = session.task ? mapTaskToUI(session.task) : null;
+  if (!resolvedTask && taskMap && taskIdStr) {
+    resolvedTask = taskMap.get ? taskMap.get(taskIdStr) : taskMap[taskIdStr] || null;
+  }
+
   return {
     id: String(session.id),
-    taskId: String(session.task_id),
-    task: session.task ? mapTaskToUI(session.task) : null,
+    taskId: taskIdStr,
+    task: resolvedTask,
     date: dateStr,
-    startTime: session.start_time,
-    durationMinutes: Number(session.duration) || 45,
-    targetProgress: Number(session.target_progress) || 50,
+    startTime: session.start_time || session.startTime,
+    durationMinutes: Number(session.duration || session.durationMinutes) || 45,
+    targetProgress: Number(session.target_progress || session.targetProgress) || 50,
     status: session.status || 'planned',
-    isAiGenerated: Boolean(session.ai_generated),
-    isPinned: Boolean(session.is_pinned),
-    aiSource: session.ai_source || 'auto',
-    planVersion: session.plan_version,
-    updatedAt: session.updated_at,
+    isAiGenerated: Boolean(session.ai_generated ?? session.isAiGenerated),
+    isPinned: Boolean(session.is_pinned ?? session.isPinned),
+    aiSource: session.ai_source || session.aiSource || 'auto',
+    planVersion: session.plan_version ?? session.planVersion,
+    updatedAt: session.updated_at || session.updatedAt,
     reason: session.reason || 'Rekomendasi sesi belajar untuk target deadline.',
   };
 }
