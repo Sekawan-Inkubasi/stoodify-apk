@@ -47,7 +47,7 @@ export default function RegisterStepAccount({
         label="Nama Lengkap Siswa"
         value={name}
         onChangeText={setName}
-        placeholder="Contoh: Muhammad Aliezzar"
+        placeholder="Contoh: Kevin Daniswara"
       />
       <Field
         label="Email Siswa / Sekolah"
@@ -114,7 +114,7 @@ export default function RegisterStepAccount({
       {error ? <AppText style={styles.error}>{error}</AppText> : null}
 
       <Button
-        title="Lanjut: Data Pendidikan"
+        title="Lanjut"
         onPress={handleProceed}
         style={styles.submit}
       />

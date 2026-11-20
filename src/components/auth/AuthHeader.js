@@ -29,8 +29,8 @@ export default function AuthHeader({ mode, registerStep, onBack }) {
           {registerStep < 3 ? (
             <View style={styles.stepIndicatorRow}>
               <View style={styles.stepDots}>
-                <View style={[styles.stepDot, registerStep >= 1 && styles.stepDotActive]} />
-                <View style={[styles.stepDot, registerStep >= 2 && styles.stepDotActive]} />
+                <View style={[styles.stepDot, registerStep === 1 && styles.stepDotActive]} />
+                <View style={[styles.stepDot, registerStep === 2 && styles.stepDotActive]} />
               </View>
             </View>
           ) : null}
