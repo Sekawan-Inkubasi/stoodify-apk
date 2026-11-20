@@ -32,6 +32,8 @@ export default function ChatDrawer({
   sessions = [],
   onReschedule,
   onFocus,
+  showMessage,
+  isOnline = true,
 }) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
@@ -204,12 +206,17 @@ export default function ChatDrawer({
               <View style={styles.headerLeft}>
                 <View style={styles.botIcon}>
                   <Bot size={18} color="#fff" />
-                  <View style={styles.onlineDot} />
+                  <View style={[styles.onlineDot, !isOnline && styles.offlineDot]} />
                 </View>
                 <View style={styles.headerTitles}>
                   <AppText style={styles.heading} numberOfLines={1}>
                     Stoodify AI
                   </AppText>
+                  {!isOnline ? (
+                    <AppText style={styles.offlineSubtitle} numberOfLines={1}>
+                      Offline · Aturan Pintar
+                    </AppText>
+                  ) : null}
                 </View>
               </View>
 
@@ -387,6 +394,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#10B981",
     borderWidth: 1.5,
     borderColor: colors.primaryDark,
+  },
+  offlineDot: {
+    backgroundColor: "#F59E0B",
+  },
+  offlineSubtitle: {
+    color: "#FEF3C7",
+    fontSize: 9,
+    fontFamily: "Poppins_500Medium",
+    marginTop: 1,
   },
   headerTitles: { flex: 1 },
   heading: { color: "#fff", fontFamily: "Poppins_700Bold", fontSize: 14 },

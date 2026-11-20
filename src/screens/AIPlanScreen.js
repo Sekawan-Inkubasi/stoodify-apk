@@ -1,16 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { CalendarClock, Info, Zap } from "lucide-react-native";
-import {
-  AppText,
-  Card,
-  EmptyState,
-  Header,
-  Loading,
-  Pill,
-  Screen,
-  SectionTitle,
-} from "../components/ui";
+import { AppText, Card, EmptyState, Header, Loading, Pill, Screen, SectionTitle } from "../components/ui";
 import StudySessionCard from "../components/StudySessionCard";
 import { colors } from "../constants/theme";
 
@@ -30,6 +21,7 @@ export default function AIPlanScreen({
   onFocus,
   onChat,
   onEditSession,
+  isOnline = true,
 }) {
   const [filter, setFilter] = useState("all");
   const [rescheduling, setRescheduling] = useState(false);
@@ -177,7 +169,9 @@ export default function AIPlanScreen({
           <View style={styles.rescheduleCopy}>
             <AppText style={styles.rescheduleTitle}>Susun Ulang Hari Ini</AppText>
             <AppText style={styles.rescheduleSub}>
-              {retryCountdown > 0
+              {!isOnline
+                ? "Anda sedang offline. Fitur AI tidak dapat diakses saat offline."
+                : retryCountdown > 0
                 ? `Tunggu ${retryCountdown} detik sebelum menyusun kembali.`
                 : "Tata ulang urutan belajar berdasarkan prioritas tugas terbaru."}
             </AppText>

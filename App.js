@@ -138,6 +138,7 @@ function StoodifyApp() {
     predictions: safePredictions,
     stats: { ...(data.stats || {}), unreadCount },
     loading: data.loading,
+    isOnline: data.isOnline,
   };
   const selectedTask = detailTask ? safeTasks.find((task) => task.id === detailTask.id) || detailTask : null;
 
@@ -159,6 +160,11 @@ function StoodifyApp() {
         </SafeAreaView>
       )
     ) : <>
+      {!data.isOnline ? (
+        <View style={styles.offlineBanner}>
+          <AppText style={styles.offlineBannerText}>Mode Offline · Perubahan disimpan lokal & disinkronkan saat online</AppText>
+        </View>
+      ) : null}
       {data.dataError ? <Pressable onPress={data.refresh} style={styles.dataError}><AppText style={styles.dataErrorText}>{data.dataError}  ·  Ketuk untuk coba lagi</AppText></Pressable> : null}
       <View style={styles.content}>
         {activeTab === 'home' ? <HomeScreen {...screenProps} onTab={setActiveTab} onAddTask={() => setAddTaskVisible(true)} onFocus={openFocus} onPredictions={() => setPredictionsVisible(true)} onSchedule={() => setActiveTab('calendar')} onNotifications={() => setNotificationsVisible(true)} onSelectTask={setDetailTask} onToggleTask={data.toggleTask} /> : null}
@@ -185,8 +191,8 @@ function StoodifyApp() {
     <EditSessionModal visible={Boolean(editingSession)} session={editingSession} onClose={() => setEditingSession(null)} onSubmit={data.editSession} />
     <FocusTimerModal visible={focus.visible} task={focus.task} initialMinutes={focus.minutes} onClose={() => setFocus((value) => ({ ...value, visible: false }))} onComplete={() => data.refresh()} />
     <NotificationsModal visible={notificationsVisible} onClose={() => setNotificationsVisible(false)} notifications={data.notifications} onMarkAll={data.markAllRead} onMarkRead={data.markRead} loading={data.loading} />
-    <PredictionsModal visible={predictionsVisible} onClose={() => setPredictionsVisible(false)} subjects={data.subjects} predictions={data.predictions} onGenerate={data.generatePrediction} onFeedback={data.predictionFeedback} busy={data.loading} />
-    <ChatDrawer visible={chatVisible} onClose={() => setChatVisible(false)} user={data.user} tasks={data.tasks} sessions={data.sessions} onReschedule={data.reschedule} onFocus={() => openFocus()} showMessage={showMessage} />
+    <PredictionsModal visible={predictionsVisible} onClose={() => setPredictionsVisible(false)} subjects={data.subjects} predictions={data.predictions} onGenerate={data.generatePrediction} onFeedback={data.predictionFeedback} busy={data.loading} isOnline={data.isOnline} />
+    <ChatDrawer visible={chatVisible} onClose={() => setChatVisible(false)} user={data.user} tasks={data.tasks} sessions={data.sessions} onReschedule={data.reschedule} onFocus={() => openFocus()} showMessage={showMessage} isOnline={data.isOnline} />
     <PreferencesModal visible={preferencesVisible} onClose={() => setPreferencesVisible(false)} value={data.preferences} onSave={data.savePreferences} busy={data.loading} />
     <ProModal visible={proVisible} onClose={() => setProVisible(false)} showMessage={showMessage} />
   </View>;
@@ -205,5 +211,12 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, width: '100%', maxWidth: 448, alignSelf: 'center', backgroundColor: colors.canvas }, content: { flex: 1 }, authWrap: { flex: 1, backgroundColor: '#fff' }, loading: { flex: 1, backgroundColor: colors.canvas }, dataError: { backgroundColor: '#FFF7E8', paddingHorizontal: 14, paddingVertical: 8 }, dataErrorText: { color: '#9A5C00', fontSize: 12, textAlign: 'center' },
+  root: { flex: 1, width: '100%', maxWidth: 448, alignSelf: 'center', backgroundColor: colors.canvas },
+  content: { flex: 1 },
+  authWrap: { flex: 1, backgroundColor: '#fff' },
+  loading: { flex: 1, backgroundColor: colors.canvas },
+  dataError: { backgroundColor: '#FFF7E8', paddingHorizontal: 14, paddingVertical: 8 },
+  dataErrorText: { color: '#9A5C00', fontSize: 12, textAlign: 'center' },
+  offlineBanner: { backgroundColor: '#FEF3C7', paddingHorizontal: 14, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#FDE68A' },
+  offlineBannerText: { color: '#92400E', fontSize: 11, textAlign: 'center', fontFamily: 'Poppins_500Medium' },
 });

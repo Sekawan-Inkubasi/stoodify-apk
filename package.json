@@ -12,7 +12,9 @@
     "build:apk": "npx expo prebuild --platform android --no-clean && cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a -Pexpo.useLegacyPackaging=true -Pandroid.enableShrinkResourcesInReleaseBuilds=true -Pandroid.enableMinifyInReleaseBuilds=true -Pandroid.enablePngCrunchInReleaseBuilds=true"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.2.1",
+    "@react-native-community/netinfo": "12.0.1",
     "@react-native-google-signin/google-signin": "^17.0.0",
     "expo": "~58.0.23",
     "expo-audio": "~58.0.12",

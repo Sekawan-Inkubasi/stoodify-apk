@@ -21,6 +21,7 @@ export default function PredictionsModal({
   onGenerate,
   onFeedback,
   busy = false,
+  isOnline = true,
 }) {
   const [selectedSubId, setSelectedSubId] = useState(
     subjects[0]?.id ? String(subjects[0].id) : "",

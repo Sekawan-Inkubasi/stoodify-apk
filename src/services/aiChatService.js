@@ -1,5 +1,6 @@
 import { apiPost } from "./apiClient";
 import { ENDPOINTS } from "../constants/apiEndpoints";
+import { isDeviceOnline } from "../hooks/useNetworkStatus";
 
 const DIRECT_AI_URL =
   process.env.EXPO_PUBLIC_AI_DIRECT_URL || "http://10.0.2.2:8000/chat";
@@ -19,6 +20,15 @@ export async function sendChatMessage(
   const trimmed = String(message || "").trim();
   if (!trimmed) {
     return { reply: "Ada yang bisa saya bantu terkait belajarmu?", action: null };
+  }
+
+  // Jika perangkat sedang offline, langsung gunakan aturan heuristik lokal (tanpa akses AI backend)
+  if (!isDeviceOnline()) {
+    const offlineReply = generateAssistantReply(trimmed, { user, tasks, sessions });
+    return {
+      ...offlineReply,
+      source: "offline_rules",
+    };
   }
 
   const payload = {
