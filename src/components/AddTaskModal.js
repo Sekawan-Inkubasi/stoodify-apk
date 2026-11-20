@@ -6,7 +6,6 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import {
   CalendarDays,
   Camera,
-  ChevronDown,
   CloudUpload,
   FileText,
   ImagePlus,
@@ -15,6 +14,7 @@ import {
 } from "lucide-react-native";
 import ModalSheet from "./ModalSheet";
 import CameraCaptureModal from "./CameraCaptureModal";
+import SubjectDropdown from "./SubjectDropdown";
 import { AppText, Button, Field, Pill } from "./ui";
 import { colors } from "../constants/theme";
 import { useDialog } from "../context/DialogContext";
@@ -45,7 +45,6 @@ export default function AddTaskModal({
 }) {
   const [title, setTitle] = useState("");
   const [subjectId, setSubjectId] = useState(subjects[0]?.id || "");
-  const [subjectPickerVisible, setSubjectPickerVisible] = useState(false);
   const [difficulty, setDifficulty] = useState(3);
   const [type, setType] = useState("assignment");
   const [taskKind, setTaskKind] = useState("Individu");
@@ -169,34 +168,11 @@ export default function AddTaskModal({
               <AppText style={styles.link}>＋ Kelola Mapel</AppText>
             </Pressable>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setSubjectPickerVisible(!subjectPickerVisible)}
-            style={styles.subjectSelect}
-          >
-            <AppText style={styles.subjectValue}>
-              {subjects.find(
-                (subject) => String(subject.id) === String(subjectId),
-              )?.name || "Pilih mata pelajaran"}
-            </AppText>
-            <ChevronDown size={16} color="#334155" />
-          </Pressable>
-          {subjectPickerVisible ? (
-            <View style={styles.subjectOptions}>
-              {subjects.map((subject) => (
-                <Pressable
-                  key={subject.id}
-                  onPress={() => {
-                    setSubjectId(String(subject.id));
-                    setSubjectPickerVisible(false);
-                  }}
-                  style={styles.subjectOption}
-                >
-                  <AppText style={styles.subjectValue}>{subject.name}</AppText>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
+          <SubjectDropdown
+            subjects={subjects}
+            selectedSubjectId={subjectId}
+            onSelect={setSubjectId}
+          />
         </View>
         <View>
           <View style={styles.deadlineHead}>
@@ -409,26 +385,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Poppins_600SemiBold",
     paddingBottom: 7,
-  },
-  subjectSelect: {
-    minHeight: 44,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "#F8FAFC",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 14,
-  },
-  subjectValue: { color: colors.ink, fontSize: 11 },
-  subjectOptions: { gap: 2, paddingTop: 6 },
-  subjectOption: {
-    minHeight: 40,
-    justifyContent: "center",
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: "#F8FAFC",
   },
   deadlineHead: { flexDirection: "row", alignItems: "center", gap: 6 },
   deadlineLabel: { flex: 1, lineHeight: 14 },

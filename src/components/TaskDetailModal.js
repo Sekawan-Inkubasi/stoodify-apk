@@ -25,9 +25,20 @@ export default function TaskDetailModal({
   onToggleSubtask,
 }) {
   const [subtaskTitle, setSubtaskTitle] = useState("");
+  const [optimisticProgress, setOptimisticProgress] = useState(
+    task?.progressPercent || 0
+  );
   const { showDialog } = useDialog();
+
+  React.useEffect(() => {
+    if (task) {
+      setOptimisticProgress(task.progressPercent || 0);
+    }
+  }, [task?.id, task?.progressPercent]);
+
   if (!task) return null;
   const done = task.status === "selesai";
+  const displayProgress = optimisticProgress;
   const remove = () =>
     showDialog({
       title: "Hapus tugas?",
@@ -116,6 +127,7 @@ export default function TaskDetailModal({
         <View style={styles.addSubtask}>
           <Field
             value={subtaskTitle}
+            style={{ flex: 1 }}
             onChangeText={setSubtaskTitle}
             placeholder="Tambah langkah kecil..."
           />
@@ -135,24 +147,25 @@ export default function TaskDetailModal({
       <View>
         <View style={styles.progressHeader}>
           <AppText style={styles.noteLabel}>PROGRES</AppText>
-          <AppText style={styles.meta}>{task.progressPercent || 0}%</AppText>
+          <AppText style={styles.meta}>{displayProgress}%</AppText>
         </View>
         <View style={styles.progressActions}>
           {[0, 25, 50, 75, 100].map((value) => (
             <Pressable
               key={value}
-              onPress={() => onProgress(task, value)}
+              onPress={() => {
+                setOptimisticProgress(value);
+                onProgress(task, value);
+              }}
               style={[
                 styles.progressDot,
-                (task.progressPercent || 0) >= value &&
-                  styles.progressDotActive,
+                displayProgress >= value && styles.progressDotActive,
               ]}
             >
               <AppText
                 style={[
                   styles.progressText,
-                  (task.progressPercent || 0) >= value &&
-                    styles.progressTextActive,
+                  displayProgress >= value && styles.progressTextActive,
                 ]}
               >
                 {value}
@@ -176,6 +189,7 @@ export default function TaskDetailModal({
       <Button
         title="Hapus Tugas"
         icon={Trash2}
+        iconColor={colors.danger}
         variant="danger"
         onPress={remove}
       />
@@ -223,10 +237,15 @@ const styles = StyleSheet.create({
   subtask: { flexDirection: "row", alignItems: "center", gap: 8 },
   subtaskText: { fontSize: 10, flex: 1 },
   subtaskDone: { color: "#94A3B8", textDecorationLine: "line-through" },
-  addSubtask: { flexDirection: "row", alignItems: "center", gap: 7 },
+  addSubtask: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+  },
   addSubtaskButton: {
-    width: 42,
-    height: 42,
+    width: 48,
+    height: 48,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",

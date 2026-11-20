@@ -215,8 +215,17 @@ export default function useAppData(showMessage) {
   }, [showMessage, sessions, syncSessionsAfterMutation]);
 
   const updateProgress = useCallback(async (task, progress) => {
-    try { const updated = await tasksApi.updateTaskProgress(task.id, progress); setTasks((items) => items.map((item) => item.id === task.id ? { ...item, ...updated } : item)); }
-    catch (error) { showMessage(error.message || 'Gagal memperbarui progres tugas.', 'Gagal Update Progres'); }
+    const prevProgress = task.progressPercent || 0;
+    // Optimistic UI update immediately
+    setTasks((items) => items.map((item) => (item.id === task.id ? { ...item, progressPercent: progress } : item)));
+    try {
+      const updated = await tasksApi.updateTaskProgress(task.id, progress);
+      setTasks((items) => items.map((item) => (item.id === task.id ? { ...item, ...updated, progressPercent: progress } : item)));
+    } catch (error) {
+      // Rollback on network failure
+      setTasks((items) => items.map((item) => (item.id === task.id ? { ...item, progressPercent: prevProgress } : item)));
+      showMessage(error.message || 'Gagal memperbarui progres tugas.', 'Gagal Update Progres');
+    }
   }, [showMessage]);
 
   const refreshTask = useCallback(async (taskId) => {
@@ -230,8 +239,25 @@ export default function useAppData(showMessage) {
     catch (error) { showMessage(error.message || 'Gagal menambahkan subtugas.', 'Gagal Tambah Subtugas'); }
   }, [refreshTask, showMessage]);
   const toggleSubtask = useCallback(async (task, subtask) => {
-    try { await tasksApi.toggleSubtask(subtask.id, !subtask.completed); await refreshTask(task.id); }
-    catch (error) { showMessage(error.message || 'Gagal memperbarui subtugas.', 'Gagal Update Subtugas'); }
+    const nextCompleted = !subtask.completed;
+    // Optimistic subtask toggle
+    setTasks((items) => items.map((item) => {
+      if (item.id !== task.id) return item;
+      const nextSubtasks = (item.subtasks || []).map((s) => s.id === subtask.id ? { ...s, completed: nextCompleted } : s);
+      return { ...item, subtasks: nextSubtasks };
+    }));
+    try {
+      await tasksApi.toggleSubtask(subtask.id, nextCompleted);
+      await refreshTask(task.id);
+    } catch (error) {
+      // Revert on error
+      setTasks((items) => items.map((item) => {
+        if (item.id !== task.id) return item;
+        const revSubtasks = (item.subtasks || []).map((s) => s.id === subtask.id ? { ...s, completed: !nextCompleted } : s);
+        return { ...item, subtasks: revSubtasks };
+      }));
+      showMessage(error.message || 'Gagal memperbarui subtugas.', 'Gagal Update Subtugas');
+    }
   }, [refreshTask, showMessage]);
 
   const addSubject = useCallback(async (input) => {
