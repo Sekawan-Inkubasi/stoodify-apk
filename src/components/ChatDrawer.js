@@ -169,6 +169,12 @@ export default function ChatDrawer({
       animationType="none"
       onRequestClose={handleClose}
     >
+      <Pressable
+        accessibilityLabel="Tutup asisten"
+        onPress={handleClose}
+        hitSlop={8}
+        style={StyleSheet.absoluteFill}
+      ></Pressable>
       <View style={styles.overlay}>
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
           <Pressable
