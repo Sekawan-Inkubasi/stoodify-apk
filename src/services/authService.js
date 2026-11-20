@@ -25,12 +25,49 @@ export async function login(email, password) {
   return result;
 }
 
-export async function register(name, email, password, confirmPassword) {
-  return apiPost(ENDPOINTS.AUTH_REGISTER, {
-    name: name.trim(),
-    email: email.trim(),
-    password,
-    confirm_password: confirmPassword || password,
+export async function register(dataOrName, email, password, confirmPassword) {
+  let payload;
+  if (typeof dataOrName === 'object' && dataOrName !== null) {
+    payload = {
+      name: (dataOrName.name || '').trim(),
+      email: (dataOrName.email || '').trim(),
+      school: (dataOrName.school || '').trim(),
+      grade: Number(dataOrName.grade) || 10,
+      major: (dataOrName.major || '').trim(),
+      password: dataOrName.password,
+      confirm_password: dataOrName.confirmPassword || dataOrName.confirm_password || dataOrName.password,
+    };
+  } else {
+    payload = {
+      name: (dataOrName || '').trim(),
+      email: (email || '').trim(),
+      school: 'SMK Telkom Sidoarjo',
+      grade: 10,
+      major: 'Teknik Komputer & Jaringan',
+      password,
+      confirm_password: confirmPassword || password,
+    };
+  }
+  return apiPost(ENDPOINTS.AUTH_REGISTER, payload);
+}
+
+export async function resendVerification(email) {
+  return apiPost(ENDPOINTS.AUTH_VERIFY_RESEND, {
+    email: (email || '').trim(),
+  });
+}
+
+export async function verifyEmail(token) {
+  return apiPost(ENDPOINTS.AUTH_VERIFY_EMAIL, {
+    token: (token || '').trim(),
+  });
+}
+
+export async function completeOnboarding(profileData) {
+  return apiPatch(ENDPOINTS.USER_ONBOARDING, {
+    school: (profileData?.school || '').trim(),
+    grade: Number(profileData?.grade) || 10,
+    major: (profileData?.major || '').trim(),
   });
 }
 

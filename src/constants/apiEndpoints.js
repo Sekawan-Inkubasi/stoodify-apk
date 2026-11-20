@@ -11,9 +11,12 @@ export const ENDPOINTS = {
   AUTH_REFRESH: '/auth/refresh',
   AUTH_ME: '/auth/me',
   AUTH_LOGOUT: '/auth/logout',
+  AUTH_VERIFY_EMAIL: '/auth/verify-email',
+  AUTH_VERIFY_RESEND: '/auth/verify-email/resend',
 
   // Users & Preferences
   USER_ME: '/users/me',
+  USER_ONBOARDING: '/users/me/onboarding',
   USER_PREFERENCES: '/users/me/preferences',
   USER_AVATAR: '/users/avatar',
 

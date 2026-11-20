@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Image,
   KeyboardAvoidingView,
+  Linking,
   NativeModules,
   Platform,
   Pressable,
@@ -9,14 +9,15 @@ import {
   TurboModuleRegistry,
   View,
 } from "react-native";
-import { ArrowLeft, Eye, EyeOff, Info } from "lucide-react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { AppText, Button, Field } from "../components/ui";
-import { colors } from "../constants/theme";
+import { AppText } from "../components/ui";
 import * as authService from "../services/authService";
+import AuthWelcomeView from "../components/auth/AuthWelcomeView";
+import AuthHeader from "../components/auth/AuthHeader";
+import LoginForm from "../components/auth/LoginForm";
+import RegisterStepAccount from "../components/auth/RegisterStepAccount";
+import RegisterStepEducation from "../components/auth/RegisterStepEducation";
+import RegisterSuccessVerify from "../components/auth/RegisterSuccessVerify";
 import { styles } from "./AuthScreen.styles";
-
-const logo = require("../../assets/web/logo_stoodify.png");
 
 function isNativeGoogleSigninAvailable() {
   try {
@@ -30,36 +31,111 @@ function isNativeGoogleSigninAvailable() {
   return false;
 }
 
+function extractTokenFromUrl(url) {
+  if (!url) return null;
+  try {
+    const match = url.match(/[?&]token=([^&]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AuthScreen({ onLogin, showMessage, initialMode = "welcome" }) {
   const [mode, setMode] = useState(initialMode || "welcome");
+  const [registerStep, setRegisterStep] = useState(1);
 
-  React.useEffect(() => {
-    if (initialMode) setMode(initialMode);
-  }, [initialMode]);
-
+  // Form states
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [school, setSchool] = useState("");
+  const [grade, setGrade] = useState(10);
+  const [major, setMajor] = useState("");
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const submit = async () => {
+  useEffect(() => {
+    if (initialMode) {
+      setMode(initialMode);
+      setRegisterStep(1);
+    }
+  }, [initialMode]);
+
+  // Deep Link listener untuk verifikasi email (stoodify://verify-email?token=...)
+  useEffect(() => {
+    let isMounted = true;
+    const processUrl = async (url) => {
+      const token = extractTokenFromUrl(url);
+      if (!token || !isMounted) return;
+      setBusy(true);
+      try {
+        await authService.verifyEmail(token);
+        showMessage?.(
+          "Email berhasil diverifikasi! Sekarang kamu dapat masuk ke akun belajarmu.",
+          "Verifikasi Sukses"
+        );
+        if (isMounted) {
+          setMode("login");
+          setRegisterStep(1);
+        }
+      } catch (err) {
+        showMessage?.(
+          err.message || "Tautan verifikasi tidak valid atau sudah kedaluwarsa.",
+          "Verifikasi Gagal"
+        );
+      } finally {
+        if (isMounted) setBusy(false);
+      }
+    };
+
+    Linking.getInitialURL().then(processUrl);
+    const sub = Linking.addEventListener("url", (event) => processUrl(event.url));
+    return () => {
+      isMounted = false;
+      sub.remove();
+    };
+  }, [showMessage]);
+
+  const handleLoginSubmit = async () => {
     setError("");
     if (!email.trim() || !password) return setError("Email dan kata sandi harus diisi.");
-    if (mode === "register") {
-      if (!name.trim()) return setError("Nama harus diisi.");
-      if (password !== confirm) return setError("Konfirmasi kata sandi belum sama.");
-      if (password.length < 8) return setError("Kata sandi minimal 8 karakter.");
-    }
     setBusy(true);
     try {
-      if (mode === "register") await authService.register(name, email, password, confirm);
       const result = await authService.login(email, password);
       onLogin(result?.data?.user || result?.user || {});
     } catch (err) {
+      if (err?.errors?.email_verified === "false" || err?.message?.toLowerCase().includes("verifikasi")) {
+        setRegisterStep(3);
+        setMode("register");
+        setError("Email akun ini belum diverifikasi. Cek kotak masuk atau kirim ulang.");
+        return;
+      }
       setError(err.message || "Tidak dapat terhubung ke server. Periksa koneksi dan coba lagi.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRegisterSubmit = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      await authService.register({
+        name,
+        email,
+        school,
+        grade,
+        major,
+        password,
+        confirmPassword: confirm,
+      });
+      setRegisterStep(3);
+    } catch (err) {
+      setError(err.message || "Pendaftaran gagal. Periksa kembali isian formulir.");
     } finally {
       setBusy(false);
     }
@@ -69,12 +145,11 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
     setError("");
     if (!isNativeGoogleSigninAvailable()) {
       showMessage?.(
-        "Fitur Google Sign-In membutuhkan binary APK hasil kompilasi native baru (npx expo prebuild & assembleRelease). Silakan masuk dengan Email dan Kata Sandi terlebih dahulu.",
-        "Masuk Akun Siswa",
+        "Fitur Google Sign-In membutuhkan binary APK native. Silakan masuk dengan Email dan Kata Sandi terlebih dahulu.",
+        "Masuk Akun Siswa"
       );
       return;
     }
-
     setBusy(true);
     try {
       const { GoogleSignin } = require("@react-native-google-signin/google-signin");
@@ -93,200 +168,123 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
     }
   };
 
-  if (mode === "welcome")
+  if (mode === "welcome") {
     return (
-      <View style={styles.welcome}>
-        <LinearGradient
-          colors={["#1551E8", "#3986FF", "#EAF1FC"]}
-          locations={[0, 0.72, 1]}
-          style={styles.hero}
-        >
-          <View style={styles.logoBadge}>
-            <Image source={logo} style={styles.logo} resizeMode="contain" />
-          </View>
-          <AppText style={styles.brand}>Stoodify</AppText>
-        </LinearGradient>
-        <View style={styles.welcomeCopy}>
-          <AppText style={styles.welcomeSub}>
-            Asisten AI cerdas untuk membagi waktu belajar dan menyelesaikan
-            tugas sekolah tanpa burnout.
-          </AppText>
-        </View>
-        <View style={styles.welcomeActions}>
-          <Button title="Masuk ke Akun" onPress={() => setMode("login")} />
-          <Button
-            title="Daftar Akun Baru"
-            variant="outline"
-            onPress={() => setMode("register")}
-          />
-        </View>
-      </View>
+      <AuthWelcomeView
+        onLogin={() => setMode("login")}
+        onRegister={() => {
+          setRegisterStep(1);
+          setMode("register");
+        }}
+      />
     );
+  }
 
-  const backButton = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Kembali"
-      onPress={() => setMode("welcome")}
-      style={styles.back}
-    >
-      <ArrowLeft size={20} color="#64748B" />
-    </Pressable>
-  );
+  const handleBack = () => {
+    setError("");
+    if (mode === "register") {
+      if (registerStep === 2) return setRegisterStep(1);
+      if (registerStep === 3) {
+        setRegisterStep(1);
+        return setMode("login");
+      }
+    }
+    setMode("welcome");
+  };
 
   return (
     <KeyboardAvoidingView
       style={styles.auth}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView
-        contentContainerStyle={styles.authScroll}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.authScroll} keyboardShouldPersistTaps="handled">
+        <AuthHeader mode={mode} registerStep={registerStep} onBack={handleBack} />
+
         {mode === "register" ? (
-          <View style={styles.registerHead}>
-            {backButton}
-            <View style={styles.registerHeading}>
-              <AppText style={styles.authTitle}>Daftar Akun Baru</AppText>
-              <AppText style={styles.authSub}>Lengkapi data untuk membuat akun belajarmu</AppText>
-            </View>
-          </View>
+          registerStep === 1 ? (
+            <RegisterStepAccount
+              name={name}
+              setName={setName}
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              confirm={confirm}
+              setConfirm={setConfirm}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              onNext={() => setRegisterStep(2)}
+              error={error}
+              setError={setError}
+            />
+          ) : registerStep === 2 ? (
+            <RegisterStepEducation
+              school={school}
+              setSchool={setSchool}
+              grade={grade}
+              setGrade={setGrade}
+              major={major}
+              setMajor={setMajor}
+              onBack={() => setRegisterStep(1)}
+              onSubmit={handleRegisterSubmit}
+              busy={busy}
+              error={error}
+              setError={setError}
+            />
+          ) : (
+            <RegisterSuccessVerify
+              email={email}
+              onGoToLogin={() => {
+                setRegisterStep(1);
+                setMode("login");
+              }}
+              showMessage={showMessage}
+            />
+          )
         ) : (
-          <>
-            <View style={styles.authTop}>
-              {backButton}
-              <View style={styles.smallLogo}>
-                <Image source={logo} style={styles.smallLogoImage} resizeMode="contain" />
-              </View>
-              <AppText style={styles.version}>1.0.0 Stoodify</AppText>
-            </View>
-            <View style={styles.authHead}>
-              <AppText style={styles.authTitle}>Selamat Datang Kembali</AppText>
-              <AppText style={styles.authSub}>Masuk untuk mengakses jadwal dan tugas belajarmu</AppText>
-            </View>
-          </>
+          <LoginForm
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            showPassword={showPassword}
+            setShowPassword={setShowPassword}
+            busy={busy}
+            error={error}
+            onSubmit={handleLoginSubmit}
+            onForgotPassword={() =>
+              showMessage?.(
+                "Pemulihan kata sandi belum tersedia dari layar ini. Hubungi dukungan sekolah.",
+                "Lupa Kata Sandi"
+              )
+            }
+            onGoogleSignIn={handleGoogleSignIn}
+          />
         )}
-        <View style={styles.form}>
-          {mode === "register" ? (
-            <Field
-              label="Nama Lengkap Siswa"
-              value={name}
-              onChangeText={setName}
-              placeholder="Nama siswa"
-            />
-          ) : null}
-          <Field
-            label={
-              mode === "register" ? "Email Siswa / Sekolah" : "Email Siswa"
-            }
-            value={email}
-            onChangeText={setEmail}
-            placeholder="nama@email.com"
-            keyboardType="email-address"
-          />
-          {mode === "register" ? (
-            <View style={styles.emailHint}>
-              <Info size={12} color={colors.primary} />
-              <AppText style={styles.emailHintText}>
-                Gunakan email sekolah atau email aktif siswa
+
+        {registerStep !== 3 ? (
+          <View style={styles.authFooter}>
+            <View style={styles.switchRow}>
+              <AppText style={styles.switchText}>
+                {mode === "register" ? "Sudah memiliki akun?" : "Belum punya akun?"}
               </AppText>
-            </View>
-          ) : null}
-          <Field
-            label="Kata Sandi"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Masukkan kata sandi"
-            secureTextEntry={!showPassword}
-            right={
               <Pressable
-                onPress={() => setShowPassword(!showPassword)}
-                accessibilityLabel="Tampilkan kata sandi"
-                style={styles.eye}
+                onPress={() => {
+                  setError("");
+                  setRegisterStep(1);
+                  setMode(mode === "register" ? "login" : "register");
+                }}
               >
-                {showPassword ? (
-                  <EyeOff size={18} color="#64748B" />
-                ) : (
-                  <Eye size={18} color="#64748B" />
-                )}
+                <AppText style={styles.switchLink}>
+                  {mode === "register" ? "Masuk" : "Daftar sekarang"}
+                </AppText>
               </Pressable>
-            }
-          />
-          {mode === "register" ? (
-            <Field
-              label="Konfirmasi Kata Sandi"
-              value={confirm}
-              onChangeText={setConfirm}
-              placeholder="Ulangi kata sandi"
-              secureTextEntry={!showPassword}
-            />
-          ) : null}
-          {mode === "register" ? (
-            <AppText style={styles.terms}>
-              Dengan mendaftar, kamu menyetujui Syarat & Ketentuan dan Kebijakan
-              Privasi Stoodify.
-            </AppText>
-          ) : null}
-          {error ? <AppText style={styles.error}>{error}</AppText> : null}
-          <Button
-            title={
-              busy
-                ? "Memuat..."
-                : mode === "register"
-                  ? "Daftar Sekarang"
-                  : "Masuk Sekarang"
-            }
-            onPress={submit}
-            disabled={busy}
-            loading={busy}
-            style={styles.submit}
-          />
-          {mode === "login" ? (
-            <Pressable
-              onPress={() =>
-                showMessage(
-                  "Pemulihan kata sandi belum tersedia dari layar ini. Hubungi dukungan sekolah.",
-                  "Lupa Kata Sandi",
-                )
-              }
-            >
-              <AppText style={styles.forgot}>Lupa Kata Sandi?</AppText>
-            </Pressable>
-          ) : null}
-          {mode === "login" ? (
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <AppText style={styles.dividerText}>Atau</AppText>
-              <View style={styles.dividerLine} />
             </View>
-          ) : null}
-          {mode === "login" ? (
-            <Pressable
-              accessibilityRole="button"
-              disabled={busy}
-              onPress={handleGoogleSignIn}
-              style={styles.schoolButton}
-            >
-              <AppText style={styles.googleMark}>G</AppText>
-              <AppText style={styles.schoolButtonText}>
-                {busy ? "Menghubungkan..." : "Lanjutkan dengan Google"}
-              </AppText>
-            </Pressable>
-          ) : null}
-        </View>
-        <View style={styles.authFooter}>
-          <View style={styles.switchRow}>
-            <AppText style={styles.switchText}>
-              {mode === "register" ? "Sudah memiliki akun?" : "Belum punya akun?"}
-            </AppText>
-            <Pressable onPress={() => { setError(""); setMode(mode === "register" ? "login" : "register"); }}>
-              <AppText style={styles.switchLink}>
-                {mode === "register" ? "Masuk" : "Daftar sekarang"}
-              </AppText>
-            </Pressable>
+            {mode === "login" ? (
+              <AppText style={styles.copyright}>© 2026 Stoodify, Inc</AppText>
+            ) : null}
           </View>
-          {mode === "login" ? <AppText style={styles.copyright}>© 2026 Stoodify, Inc</AppText> : null}
-        </View>
+        ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );
