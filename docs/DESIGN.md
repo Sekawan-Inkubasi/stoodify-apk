@@ -207,6 +207,14 @@ Tangkapan layar di bawah ini diambil langsung dari perangkat emulator Android ak
 | **Modal Focus Timer** (`FocusTimerModal`) | [screen-focus-timer.png](screenshots/screen-focus-timer.png) | Bottom sheet pengatur waktu fokus (Pomodoro style), preset durasi (15, 25, 45, 60 menit), status audio white noise, dan tombol mulai belajar. |
 | **Drawer Asisten AI** (`ChatDrawer`) | [screen-chat-drawer.png](screenshots/screen-chat-drawer.png) | Side drawer geser dari kanan, indikator status model LLM, riwayat percakapan interaktif, chip saran instruksi belajar cepat, dan kolom kirim pesan. |
 | **Dialog Konfirmasi** (`CustomAlertDialog`) | [screen-custom-dialog.png](screenshots/screen-custom-dialog.png) | Dialog seragam pengganti alert OS, kartu putih di tengah layar dengan dark overlay 65%, ikon bahaya berlatar merah lembut, tombol "Batal" dan "Keluar". |
+| **Onboarding Step 0** (`OnboardingScreen`) | [screen-onboarding-step0.png](screenshots/screen-onboarding-step0.png) | Welcome screen hero badge, judul tebal, value proposition, badges "Anti Prokrastinasi" & "AI Scheduler", tombol Lewati & Lanjut. |
+| **Onboarding Step 1** (`OnboardingSlide`) | [screen-onboarding-step1.png](screenshots/screen-onboarding-step1.png) | Penjelasan penjadwalan otomatis & adaptif, kartu preview sesi belajar matematika dengan tag prioritas tinggi. |
+| **Onboarding Step 2** (`OnboardingSlide`) | [screen-onboarding-step2.png](screenshots/screen-onboarding-step2.png) | Penjelasan pengingat deadline bertingkat & kartu aktivasi izin notifikasi lokal sistem Android. |
+| **Onboarding Step 3** (`OnboardingQuestionnaire`) | [screen-onboarding-step3.png](screenshots/screen-onboarding-step3.png) | Kuisioner interaktif tujuan belajar siswa (Tugas Tepat Waktu, Jadwal Seimbang, Persiapan Ujian, Kurangi Prokrastinasi). |
+| **Onboarding Step 4** (`OnboardingQuestionnaire`) | [screen-onboarding-step4.png](screenshots/screen-onboarding-step4.png) | Kuisioner jam sekolah dengan preset pills (Full Day, Reguler, SMK) dan input jam masuk/pulang. |
+| **Onboarding Step 5** (`OnboardingQuestionnaire`) | [screen-onboarding-step5.png](screenshots/screen-onboarding-step5.png) | Kuisioner rentang waktu belajar mandiri di rumah dan selektor durasi sesi fokus (30, 45, 60, 90 menit). |
+| **Onboarding Step 6** (`OnboardingQuestionnaire`) | [screen-onboarding-step6.png](screenshots/screen-onboarding-step6.png) | Rangkuman profil belajar siswa dan tombol aksi ganda Masuk ke Akun atau Daftar Akun Baru. |
+| **Preferensi Pengingat** (`PreferencesModal`) | [screen-preferences-reminders.png](screenshots/screen-preferences-reminders.png) | Selektor menit pengingat sesi (5m, 10m, 15m, 30m) dan toggle pengingat deadline bertingkat H-2, H-1, H-0. |
 
 ---
 

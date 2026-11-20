@@ -4,6 +4,8 @@ const KEYS = {
   access: 'stoodify_access_token',
   refresh: 'stoodify_refresh_token',
   user: 'stoodify_user',
+  onboarding: 'stoodify_has_seen_onboarding',
+  onboardingPrefs: 'stoodify_onboarding_prefs',
 };
 
 let memoryTokens = { accessToken: null, refreshToken: null, user: null };
@@ -107,6 +109,40 @@ export function isTokenExpiringSoon(thresholdSeconds = 120) {
   return Date.now() + thresholdSeconds * 1000 >= expiryMs;
 }
 
+export async function getHasSeenOnboarding() {
+  try {
+    const val = await SecureStore.getItemAsync(KEYS.onboarding);
+    return val === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export async function setHasSeenOnboarding(seen = true) {
+  try {
+    await SecureStore.setItemAsync(KEYS.onboarding, seen ? 'true' : 'false');
+  } catch {}
+}
+
+export async function getOnboardingPreferences() {
+  try {
+    const val = await SecureStore.getItemAsync(KEYS.onboardingPrefs);
+    return val ? JSON.parse(val) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setOnboardingPreferences(prefs) {
+  try {
+    if (!prefs) {
+      await SecureStore.deleteItemAsync(KEYS.onboardingPrefs);
+    } else {
+      await SecureStore.setItemAsync(KEYS.onboardingPrefs, JSON.stringify(prefs));
+    }
+  } catch {}
+}
+
 export default {
   hydrateTokens,
   setTokens,
@@ -120,4 +156,8 @@ export default {
   subscribeTokenChange,
   getTokenExpiry,
   isTokenExpiringSoon,
+  getHasSeenOnboarding,
+  setHasSeenOnboarding,
+  getOnboardingPreferences,
+  setOnboardingPreferences,
 };

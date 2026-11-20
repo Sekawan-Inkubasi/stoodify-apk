@@ -16,8 +16,12 @@ import * as authService from "../services/authService";
 
 const logo = require("../../assets/web/logo_stoodify.png");
 
-export default function AuthScreen({ onLogin, showMessage }) {
-  const [mode, setMode] = useState("welcome");
+export default function AuthScreen({ onLogin, showMessage, initialMode = "welcome" }) {
+  const [mode, setMode] = useState(initialMode || "welcome");
+
+  React.useEffect(() => {
+    if (initialMode) setMode(initialMode);
+  }, [initialMode]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

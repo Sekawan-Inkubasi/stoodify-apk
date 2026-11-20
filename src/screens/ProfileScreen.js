@@ -1,29 +1,322 @@
-import React from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
-import { BookOpen, CheckCircle2, ChevronRight, CircleHelp, Clock3, Crown, Flame, Globe2, LogOut, Settings2, UserRound } from 'lucide-react-native';
-import { AppText, Card, Header, Screen } from '../components/ui';
-import { colors } from '../constants/theme';
+import React from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import {
+  BookOpen,
+  CheckCircle2,
+  ChevronRight,
+  CircleHelp,
+  Clock3,
+  Crown,
+  Flame,
+  Globe2,
+  LogOut,
+  Settings2,
+  Sparkles,
+  UserRound,
+} from "lucide-react-native";
+import { AppText, Card, Header, Screen } from "../components/ui";
+import { colors } from "../constants/theme";
 
-function MenuRow({ icon: Icon, title, subtitle, onPress, tint = '#EFF6FF', danger = false }) {
-  return <Pressable onPress={onPress} style={styles.menuRow}><View style={[styles.menuIcon, { backgroundColor: tint }]}><Icon size={17} color={danger ? colors.danger : colors.primary} /></View><View style={styles.menuCopy}><AppText style={[styles.menuTitle, danger && styles.danger]}>{title}</AppText>{subtitle ? <AppText style={styles.menuSub}>{subtitle}</AppText> : null}</View><ChevronRight size={16} color="#94A3B8" /></Pressable>;
+function MenuRow({
+  icon: Icon,
+  title,
+  subtitle,
+  onPress,
+  tint = "#EFF6FF",
+  danger = false,
+}) {
+  return (
+    <Pressable onPress={onPress} style={styles.menuRow}>
+      <View style={[styles.menuIcon, { backgroundColor: tint }]}>
+        <Icon size={17} color={danger ? colors.danger : colors.primary} />
+      </View>
+      <View style={styles.menuCopy}>
+        <AppText style={[styles.menuTitle, danger && styles.danger]}>
+          {title}
+        </AppText>
+        {subtitle ? <AppText style={styles.menuSub}>{subtitle}</AppText> : null}
+      </View>
+      <ChevronRight size={16} color="#94A3B8" />
+    </Pressable>
+  );
 }
 
-export default function ProfileScreen({ user, stats, subjectsCount, loading = false, onAvatar, onManageSubjects, onHelp, onPro, onLogout, onPreferences, onWebFallback }) {
-  return <Screen>
-    <Header title="Profil & Akun" subtitle="Statistik belajar dan preferensi penjadwalan AI" />
-    <Card style={styles.profileCard}>
-      <View style={styles.identityRow}>
-        <Pressable onPress={onAvatar} style={styles.avatarWrap}>{user?.avatarUrl ? <Image source={{ uri: user.avatarUrl }} style={styles.avatar} /> : <View style={styles.avatar}><AppText style={styles.avatarLetters}>{(user?.name || 'S').split(' ').map((word) => word[0]).slice(0, 2).join('').toUpperCase()}</AppText></View>}<View style={styles.avatarEdit}><UserRound size={12} color="#fff" /></View></Pressable>
-        <View style={styles.identityCopy}><View style={styles.nameRow}><AppText style={styles.userName}>{user?.name || 'Siswa'}</AppText><AppText style={styles.gradeBadge}>{user?.grade || 'SMA - Fase F'}</AppText></View><AppText style={styles.userDetail}>{user?.grade || 'SMA - Fase F'}</AppText><AppText style={styles.userSchool}>{user?.school || user?.email || 'Stoodify'}</AppText></View>
+export default function ProfileScreen({
+  user,
+  stats,
+  subjectsCount,
+  loading = false,
+  onAvatar,
+  onManageSubjects,
+  onHelp,
+  onPro,
+  onLogout,
+  onPreferences,
+  onWebFallback,
+  onReplayOnboarding,
+}) {
+  return (
+    <Screen>
+      <Header
+        title="Profil & Akun"
+        subtitle="Statistik belajar dan preferensi penjadwalan AI"
+      />
+      <Card style={styles.profileCard}>
+        <View style={styles.identityRow}>
+          <Pressable onPress={onAvatar} style={styles.avatarWrap}>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatar}>
+                <AppText style={styles.avatarLetters}>
+                  {(user?.name || "S")
+                    .split(" ")
+                    .map((word) => word[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()}
+                </AppText>
+              </View>
+            )}
+            <View style={styles.avatarEdit}>
+              <UserRound size={12} color="#fff" />
+            </View>
+          </Pressable>
+          <View style={styles.identityCopy}>
+            <View style={styles.nameRow}>
+              <AppText style={styles.userName}>{user?.name || "Siswa"}</AppText>
+              <AppText style={styles.gradeBadge}>
+                {`Kelas ${user?.grade}` || "SMA - Fase F"}
+              </AppText>
+            </View>
+            <AppText style={styles.userSchool}>
+              {user?.school || user?.email || "Stoodify"}
+            </AppText>
+          </View>
+        </View>
+        <Pressable onPress={onPro} style={styles.proRow}>
+          <View style={styles.proIcon}>
+            <Crown size={17} color="#A16207" />
+          </View>
+          <View style={styles.proCopy}>
+            <AppText style={styles.proTitle}>Paket Siswa Reguler</AppText>
+            <AppText style={styles.proSub}>
+              Upgrade ke Stoodify Pro untuk fitur lebih lengkap
+            </AppText>
+          </View>
+          <ChevronRight size={17} color="#94A3B8" />
+        </Pressable>
+      </Card>
+      <View style={styles.stats}>
+        {[
+          [stats?.streakDays || 0, "Streak", "d", Flame, "#F97316", "#FFF7ED"],
+          [
+            stats?.totalStudyHours || 0,
+            "Fokus",
+            "h",
+            Clock3,
+            colors.primary,
+            "#EFF6FF",
+          ],
+          [
+            Math.round(stats?.onTimeRate || 0),
+            "Tepat Waktu",
+            "%",
+            CheckCircle2,
+            "#10B981",
+            "#ECFDF5",
+          ],
+        ].map(([value, label, suffix, Icon, tint, background]) => (
+          <Card key={label} style={styles.stat}>
+            <View style={[styles.statIcon, { backgroundColor: background }]}>
+              <Icon size={16} color={tint} />
+            </View>
+            {loading && !stats?.streakDays && !stats?.totalStudyHours ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ marginVertical: 4 }}
+              />
+            ) : (
+              <AppText style={styles.statValue}>
+                {value}
+                {suffix}
+              </AppText>
+            )}
+            <AppText style={styles.statLabel}>{label}</AppText>
+          </Card>
+        ))}
       </View>
-      <Pressable onPress={onPro} style={styles.proRow}><View style={styles.proIcon}><Crown size={17} color="#A16207" /></View><View style={styles.proCopy}><AppText style={styles.proTitle}>Paket Siswa Reguler</AppText><AppText style={styles.proSub}>Upgrade ke Stoodify Pro untuk fitur lebih lengkap</AppText></View><ChevronRight size={17} color="#94A3B8" /></Pressable>
-    </Card>
-      <View style={styles.stats}>{[[stats?.streakDays || 0, 'Streak', 'd', Flame, '#F97316', '#FFF7ED'], [stats?.totalStudyHours || 0, 'Fokus', 'h', Clock3, colors.primary, '#EFF6FF'], [Math.round(stats?.onTimeRate || 0), 'Tepat Waktu', '%', CheckCircle2, '#10B981', '#ECFDF5']].map(([value, label, suffix, Icon, tint, background]) => <Card key={label} style={styles.stat}><View style={[styles.statIcon, { backgroundColor: background }]}><Icon size={16} color={tint} /></View>{loading && !stats?.streakDays && !stats?.totalStudyHours ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 4 }} /> : <AppText style={styles.statValue}>{value}{suffix}</AppText>}<AppText style={styles.statLabel}>{label}</AppText></Card>)}</View>
-    <Card style={styles.menuCard}><MenuRow icon={BookOpen} title="Mata Pelajaran" subtitle={`${subjectsCount} mata pelajaran aktif terdaftar`} onPress={onManageSubjects} /><View style={styles.divider} /><MenuRow icon={Settings2} title="Preferensi Belajar" subtitle="Atur jam dan durasi fokus harian" onPress={onPreferences} /><View style={styles.divider} /><MenuRow icon={CircleHelp} title="Pusat Bantuan & Panduan" subtitle="Tanya jawab dan cara kerja rekomendasi AI" onPress={onHelp} /><View style={styles.divider} /><MenuRow icon={Globe2} title="Buka Versi Web Darurat" subtitle="Gunakan versi web Stoodify bila diperlukan" onPress={onWebFallback} /><View style={styles.divider} /><MenuRow icon={LogOut} title="Keluar dari Akun" subtitle="Kembali ke layar masuk" onPress={onLogout} danger tint="#FFF1F2" /></Card>
-  </Screen>;
+      <Card style={styles.menuCard}>
+        <MenuRow
+          icon={BookOpen}
+          title="Mata Pelajaran"
+          subtitle={`${subjectsCount} mata pelajaran aktif terdaftar`}
+          onPress={onManageSubjects}
+        />
+        <View style={styles.divider} />
+        <MenuRow
+          icon={Settings2}
+          title="Preferensi Belajar & Pengingat"
+          subtitle="Atur jam fokus dan waktu pengingat tugas"
+          onPress={onPreferences}
+        />
+        <View style={styles.divider} />
+        <MenuRow
+          icon={Sparkles}
+          title="Panduan Pengantar (Onboarding)"
+          subtitle="Buka kembali alur penjelasan Stoodify"
+          onPress={onReplayOnboarding}
+        />
+        <View style={styles.divider} />
+        <MenuRow
+          icon={CircleHelp}
+          title="Pusat Bantuan & Panduan"
+          subtitle="Tanya jawab dan cara kerja rekomendasi AI"
+          onPress={onHelp}
+        />
+        <View style={styles.divider} />
+        <MenuRow
+          icon={Globe2}
+          title="Buka Versi Web Darurat"
+          subtitle="Gunakan versi web Stoodify bila diperlukan"
+          onPress={onWebFallback}
+        />
+        <View style={styles.divider} />
+        <MenuRow
+          icon={LogOut}
+          title="Keluar dari Akun"
+          subtitle="Kembali ke layar masuk"
+          onPress={onLogout}
+          danger
+          tint="#FFF1F2"
+        />
+      </Card>
+    </Screen>
+  );
 }
 
 const styles = StyleSheet.create({
-  profileCard: { paddingVertical: 15 }, identityRow: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 4, paddingBottom: 14 }, avatarWrap: { position: 'relative' }, avatar: { width: 64, height: 64, borderRadius: 34, borderWidth: 2, borderColor: colors.primary, backgroundColor: '#EAF1FF', alignItems: 'center', justifyContent: 'center' }, avatarLetters: { color: colors.primary, fontFamily: 'Poppins_700Bold', fontSize: 19 }, avatarEdit: { position: 'absolute', right: -2, bottom: 0, backgroundColor: colors.primary, width: 22, height: 22, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' }, identityCopy: { flex: 1 }, nameRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }, userName: { fontFamily: 'Poppins_700Bold', fontSize: 14 }, gradeBadge: { color: colors.primary, backgroundColor: '#EFF6FF', fontFamily: 'Poppins_600SemiBold', fontSize: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 }, userDetail: { color: colors.muted, fontSize: 10, marginTop: 3 }, userSchool: { color: '#64748B', fontSize: 9, marginTop: 1 }, proRow: { minHeight: 58, borderTopWidth: 1, borderColor: '#F1F5F9', paddingTop: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, proIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' }, proCopy: { flex: 1 }, proTitle: { color: colors.ink, fontFamily: 'Poppins_700Bold', fontSize: 11 }, proSub: { color: colors.muted, fontSize: 9, marginTop: 3 }, stats: { flexDirection: 'row', gap: 9 }, stat: { flex: 1, alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4 }, statIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, statValue: { fontFamily: 'Poppins_700Bold', fontSize: 15, color: colors.ink, marginTop: 3 }, statLabel: { color: colors.muted, fontSize: 8, marginTop: 3 },
-  menuCard: { paddingVertical: 4, paddingHorizontal: 13 }, menuRow: { minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: 10 }, menuIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }, menuCopy: { flex: 1 }, menuTitle: { fontFamily: 'Poppins_700Bold', fontSize: 10 }, menuSub: { color: colors.muted, fontSize: 8, marginTop: 2 }, danger: { color: colors.danger }, divider: { height: 1, backgroundColor: '#F1F5F9', marginLeft: 45 },
+  profileCard: { paddingVertical: 15 },
+  identityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 13,
+    paddingHorizontal: 4,
+    paddingBottom: 14,
+  },
+  avatarWrap: { position: "relative" },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 34,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: "#EAF1FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarLetters: {
+    color: colors.primary,
+    fontFamily: "Poppins_700Bold",
+    fontSize: 19,
+  },
+  avatarEdit: {
+    position: "absolute",
+    right: -2,
+    bottom: 0,
+    backgroundColor: colors.primary,
+    width: 22,
+    height: 22,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  identityCopy: { flex: 1 },
+  nameRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+  },
+  userName: { fontFamily: "Poppins_700Bold", fontSize: 14 },
+  gradeBadge: {
+    color: colors.primary,
+    backgroundColor: "#EFF6FF",
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  userDetail: { color: colors.muted, fontSize: 10, marginTop: 3 },
+  userSchool: { color: "#64748B", fontSize: 9, marginTop: 1 },
+  proRow: {
+    minHeight: 58,
+    borderTopWidth: 1,
+    borderColor: "#F1F5F9",
+    paddingTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  proIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  proCopy: { flex: 1 },
+  proTitle: { color: colors.ink, fontFamily: "Poppins_700Bold", fontSize: 11 },
+  proSub: { color: colors.muted, fontSize: 9, marginTop: 3 },
+  stats: { flexDirection: "row", gap: 9 },
+  stat: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  statIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statValue: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 15,
+    color: colors.ink,
+    marginTop: 3,
+  },
+  statLabel: { color: colors.muted, fontSize: 8, marginTop: 3 },
+  menuCard: { paddingVertical: 4, paddingHorizontal: 13 },
+  menuRow: {
+    minHeight: 62,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  menuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuCopy: { flex: 1 },
+  menuTitle: { fontFamily: "Poppins_700Bold", fontSize: 10 },
+  menuSub: { color: colors.muted, fontSize: 8, marginTop: 2 },
+  danger: { color: colors.danger },
+  divider: { height: 1, backgroundColor: "#F1F5F9", marginLeft: 45 },
 });

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BackHandler, Platform, Pressable, StatusBar, StyleSheet, View } from 'react-native';
+import { BackHandler, Modal, Platform, Pressable, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as ImagePicker from 'expo-image-picker';
@@ -10,6 +10,7 @@ import CalendarScreen from './src/screens/CalendarScreen';
 import AIPlanScreen from './src/screens/AIPlanScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import AuthScreen from './src/screens/AuthScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 import BottomTabs from './src/components/BottomTabs';
 import AddTaskModal from './src/components/AddTaskModal';
 import AddScheduleModal from './src/components/AddScheduleModal';
@@ -27,6 +28,7 @@ import DraggableAssistantTab from './src/components/DraggableAssistantTab';
 import UndoToast from './src/components/UndoToast';
 import EditSessionModal from './src/components/EditSessionModal';
 import { colors } from './src/constants/theme';
+import tokenStorage from './src/services/tokenStorage';
 import useAppData from './src/hooks/useAppData';
 
 function StoodifyApp() {
@@ -44,6 +46,9 @@ function StoodifyApp() {
   const [preferencesVisible, setPreferencesVisible] = useState(false);
   const [scheduleDay, setScheduleDay] = useState('Senin');
   const [webFallback, setWebFallback] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(null);
+  const [onboardingForced, setOnboardingForced] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState('welcome');
   const insets = useSafeAreaInsets();
   const [fontsLoaded] = useFonts({
     Poppins_400Regular: require('./assets/fonts/Poppins_400Regular.ttf'),
@@ -64,6 +69,10 @@ function StoodifyApp() {
     });
     return () => subscription.remove();
   }, [activeTab, chatVisible, webFallback]);
+
+  useEffect(() => {
+    tokenStorage.getHasSeenOnboarding().then((seen) => setHasSeenOnboarding(Boolean(seen)));
+  }, []);
 
   const openFocus = useCallback((task = null, minutes = null) => {
     const target = minutes || task?.estimatedDurationMinutes || 25;
@@ -124,19 +133,41 @@ function StoodifyApp() {
   const selectedTask = detailTask ? safeTasks.find((task) => task.id === detailTask.id) || detailTask : null;
 
   return <View style={styles.root}><StatusBar barStyle="dark-content" backgroundColor={colors.canvas} />
-    {!data.isLoggedIn ? <SafeAreaView edges={['top', 'bottom']} style={styles.authWrap}><AuthScreen onLogin={data.login} showMessage={showMessage} /></SafeAreaView> : <>
+    {!data.isLoggedIn ? (
+      (hasSeenOnboarding === false || onboardingForced) ? (
+        <SafeAreaView edges={['top', 'bottom']} style={styles.authWrap}>
+          <OnboardingScreen
+            onComplete={(mode) => {
+              setHasSeenOnboarding(true);
+              setOnboardingForced(false);
+              setAuthInitialMode(mode || 'login');
+            }}
+          />
+        </SafeAreaView>
+      ) : (
+        <SafeAreaView edges={['top', 'bottom']} style={styles.authWrap}>
+          <AuthScreen initialMode={authInitialMode} onLogin={data.login} showMessage={showMessage} />
+        </SafeAreaView>
+      )
+    ) : <>
       {data.dataError ? <Pressable onPress={data.refresh} style={styles.dataError}><AppText style={styles.dataErrorText}>{data.dataError}  ·  Ketuk untuk coba lagi</AppText></Pressable> : null}
       <View style={styles.content}>
         {activeTab === 'home' ? <HomeScreen {...screenProps} onTab={setActiveTab} onAddTask={() => setAddTaskVisible(true)} onFocus={openFocus} onPredictions={() => setPredictionsVisible(true)} onSchedule={() => setActiveTab('calendar')} onNotifications={() => setNotificationsVisible(true)} onSelectTask={setDetailTask} onToggleTask={data.toggleTask} /> : null}
         {activeTab === 'tasks' ? <TasksScreen {...screenProps} onOpenTask={setDetailTask} onToggle={data.toggleTask} onAdd={() => setAddTaskVisible(true)} onManageSubjects={() => setSubjectModalVisible(true)} /> : null}
         {activeTab === 'calendar' ? <CalendarScreen {...screenProps} onAddSchedule={(day) => { setScheduleDay(day); setAddScheduleVisible(true); }} onManageSubjects={() => setSubjectModalVisible(true)} onDeleteSchedule={handleDeleteSchedule} onFocus={openFocus} /> : null}
         {activeTab === 'ai-plan' ? <AIPlanScreen {...screenProps} onReschedule={data.reschedule} onFocus={openFocus} onChat={() => setChatVisible(true)} onEditSession={setEditingSession} /> : null}
-        {activeTab === 'profile' ? <ProfileScreen {...screenProps} subjectsCount={safeSubjects.length} onAvatar={handleAvatar} onManageSubjects={() => setSubjectModalVisible(true)} onHelp={() => showMessage('Untuk bantuan, hubungi tim Stoodify melalui kontak dukungan sekolah.', 'Pusat Bantuan Stoodify')} onPro={() => setProVisible(true)} onLogout={handleLogout} onPreferences={loadPreferences} onWebFallback={() => setWebFallback(true)} /> : null}
+        {activeTab === 'profile' ? <ProfileScreen {...screenProps} subjectsCount={safeSubjects.length} onAvatar={handleAvatar} onManageSubjects={() => setSubjectModalVisible(true)} onHelp={() => showMessage('Untuk bantuan, hubungi tim Stoodify melalui kontak dukungan sekolah.', 'Pusat Bantuan Stoodify')} onPro={() => setProVisible(true)} onLogout={handleLogout} onPreferences={loadPreferences} onWebFallback={() => setWebFallback(true)} onReplayOnboarding={() => setOnboardingForced(true)} /> : null}
       </View>
       <BottomTabs active={activeTab} onChange={setActiveTab} urgentCount={urgentCount} bottom={Math.max(14, insets.bottom + 8)} />
       <DraggableAssistantTab onPress={() => setChatVisible(true)} />
       <UndoToast visible={data.undoToastVisible} onView={() => setActiveTab('ai-plan')} onUndo={data.undoScheduleChange} onDismiss={() => data.setUndoToastVisible(false)} bottom={Math.max(14, insets.bottom + 8) + 68} />
     </>}
+
+    {onboardingForced && data.isLoggedIn ? (
+      <Modal visible animationType="slide" onRequestClose={() => setOnboardingForced(false)}>
+        <OnboardingScreen onComplete={() => setOnboardingForced(false)} />
+      </Modal>
+    ) : null}
 
     <AddTaskModal visible={addTaskVisible} onClose={() => setAddTaskVisible(false)} subjects={data.subjects} onSubmit={data.addTask} onManageSubjects={() => setSubjectModalVisible(true)} showMessage={showMessage} />
     <AddScheduleModal visible={addScheduleVisible} onClose={() => setAddScheduleVisible(false)} subjects={data.subjects} defaultDay={scheduleDay} onSubmit={data.addSchedule} onManageSubjects={() => setSubjectModalVisible(true)} />

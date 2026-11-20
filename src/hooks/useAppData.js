@@ -9,13 +9,14 @@ import * as sessionsApi from '../services/studySessionService';
 import * as statsApi from '../services/statisticsService';
 import * as notificationsApi from '../services/notificationService';
 import * as predictionsApi from '../services/predictionService';
-import {
+import tokenStorage, {
   hydrateTokens,
   hasActiveSession,
   clearTokens,
   subscribeTokenChange,
   isTokenExpiringSoon,
 } from '../services/tokenStorage';
+import localNotificationService from '../services/localNotificationService';
 import { performTokenRefresh } from '../services/apiClient';
 import { API_BASE_URL } from '../constants/config';
 
@@ -86,6 +87,9 @@ export default function useAppData(showMessage) {
       }
       const failed = results.slice(0, 5).some((item) => item.status === 'rejected');
       if (failed) setDataError('Sebagian data belum dapat dimuat dari server. Tarik ulang atau coba lagi.');
+      const safeTasks = taskResult.status === 'fulfilled' && Array.isArray(taskResult.value) ? taskResult.value.filter(Boolean) : [];
+      const safeSessions = sessionResult.status === 'fulfilled' && Array.isArray(sessionResult.value) ? sessionResult.value.filter(Boolean) : [];
+      localNotificationService.syncAllReminders({ tasks: safeTasks, sessions: safeSessions, preferences });
     } catch (error) {
       setDataError(error.message || 'Data belum dapat dimuat dari server.');
     } finally { setLoading(false); }
@@ -139,9 +143,17 @@ export default function useAppData(showMessage) {
 
   useEffect(() => { if (isLoggedIn) refresh(); }, [isLoggedIn, refresh]);
 
-  const login = useCallback((profile) => {
+  const login = useCallback(async (profile) => {
     setUser({ ...initialUser, ...(profile || {}), avatarUrl: profile?.avatar_url || profile?.avatarUrl || null });
     setIsLoggedIn(true);
+    try {
+      const pending = await tokenStorage.getOnboardingPreferences();
+      if (pending) {
+        await auth.updatePreferences(pending);
+        setPreferences((prev) => ({ ...(prev || {}), ...pending }));
+        await tokenStorage.setOnboardingPreferences(null);
+      }
+    } catch {}
   }, []);
 
   const logout = useCallback(async () => {
@@ -181,6 +193,11 @@ export default function useAppData(showMessage) {
       const prevSessions = sessions;
       const updated = await tasksApi.updateTaskStatus(task.id, next);
       setTasks((items) => items.map((item) => item.id === task.id ? { ...item, ...updated } : item));
+      if (next === 'done') {
+        localNotificationService.cancelTaskReminders(task.id);
+      } else {
+        localNotificationService.scheduleTaskReminders({ ...task, status: 'aktif' });
+      }
       setStats(await statsApi.getOverview());
       syncSessionsAfterMutation(prevSessions);
     } catch (error) { showMessage(error.message || 'Gagal memperbarui status tugas.', 'Gagal Update Tugas'); }
@@ -191,6 +208,7 @@ export default function useAppData(showMessage) {
       const prevSessions = sessions;
       await tasksApi.deleteTask(task.id);
       setTasks((items) => items.filter((item) => item.id !== task.id));
+      localNotificationService.cancelTaskReminders(task.id);
       showMessage('Tugas berhasil dihapus dari database.', 'Tugas Dihapus');
       syncSessionsAfterMutation(prevSessions);
     } catch (error) { showMessage(error.message || 'Gagal menghapus tugas.', 'Gagal Hapus Tugas'); }
