@@ -19,6 +19,10 @@ export function mapSessionToUI(session) {
     targetProgress: Number(session.target_progress) || 50,
     status: session.status || 'planned',
     isAiGenerated: Boolean(session.ai_generated),
+    isPinned: Boolean(session.is_pinned),
+    aiSource: session.ai_source || 'auto',
+    planVersion: session.plan_version,
+    updatedAt: session.updated_at,
     reason: session.reason || 'Rekomendasi sesi belajar untuk target deadline.',
   };
 }
@@ -61,6 +65,15 @@ export async function rejectRecommendation(id) {
   return mapSessionToUI(result?.data);
 }
 
+export async function undoScheduleRecommendation() {
+  const result = await apiPost(ENDPOINTS.AI_SCHEDULE_UNDO, {});
+  const list = result?.data || [];
+  return {
+    message: result?.message || '',
+    sessions: list.map(mapSessionToUI),
+  };
+}
+
 export async function rescheduleSessions() {
   const result = await apiPost(ENDPOINTS.AI_RESCHEDULE);
   const list = result?.data || [];
@@ -91,6 +104,7 @@ export default {
   getRecommendations,
   acceptRecommendation,
   rejectRecommendation,
+  undoScheduleRecommendation,
   rescheduleSessions,
   updateSession,
   deleteSession,

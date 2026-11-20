@@ -1,3 +1,4 @@
+// Header Note: useAppData mengelola sinkronisasi multi-domain state aplikasi (auth, tasks, schedules, adaptive sessions, undo-sync, AI predictions). Batas toleransi <= 400 baris.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as auth from '../services/authService';
@@ -35,6 +36,7 @@ export default function useAppData(showMessage) {
   const [predictions, setPredictions] = useState([]);
   const [stats, setStats] = useState({});
   const [preferences, setPreferences] = useState(null);
+  const [undoToastVisible, setUndoToastVisible] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!hasActiveSession()) return;
@@ -49,7 +51,7 @@ export default function useAppData(showMessage) {
         : Promise.resolve([]);
 
       const results = await Promise.allSettled([
-        tasksApi.getTasks(), schedulesApi.getSchedules(), sessionsApi.getRecommendations(),
+        tasksApi.getTasks(), schedulesApi.getSchedules(), sessionsApi.getSessions({ status: 'planned' }),
         statsApi.getOverview(), notificationsApi.getNotifications({ unread: false }),
         predictionPromises,
       ]);
@@ -126,8 +128,9 @@ export default function useAppData(showMessage) {
 
   useEffect(() => {
     const handleAppStateChange = async (nextState) => {
-      if (nextState === 'active' && hasActiveSession() && isTokenExpiringSoon(300)) {
-        await performTokenRefresh();
+      if (nextState === 'active' && hasActiveSession()) {
+        if (isTokenExpiringSoon(300)) await performTokenRefresh();
+        sessionsApi.getSessions({ status: 'planned' }).then((s) => Array.isArray(s) && setSessions(s)).catch(() => {});
       }
     };
     const subscription = AppState.addEventListener('change', handleAppStateChange);
@@ -146,29 +149,52 @@ export default function useAppData(showMessage) {
     setIsLoggedIn(false); setUser(initialUser); setTasks([]); setSubjects([]); setSchedules([]); setSessions([]); setNotifications([]); setPredictions([]); setStats({});
   }, []);
 
+  const syncSessionsAfterMutation = useCallback(async (prevSessions) => {
+    try {
+      const updated = await sessionsApi.getSessions({ status: 'planned' });
+      if (Array.isArray(updated)) {
+        setSessions(updated);
+        const prevKey = (prevSessions || []).map((s) => `${s.id}-${s.date}-${s.startTime}`).join(',');
+        const nextKey = updated.map((s) => `${s.id}-${s.date}-${s.startTime}`).join(',');
+        if (prevKey !== nextKey && updated.length > 0) {
+          setUndoToastVisible(true);
+        }
+      }
+    } catch (_) {}
+  }, []);
+
   const addTask = useCallback(async (input) => {
     try {
+      const prevSessions = sessions;
       const created = await tasksApi.createTask(input);
       const subject = subjects.find((item) => String(item.id) === String(input.subjectId));
       setTasks((items) => [{ ...created, subject: created.subject || subject, attachment: input.attachment }, ...items]);
       showMessage('Tugas berhasil ditambahkan ke database.', 'Tugas Ditambahkan');
       statsApi.getOverview().then(setStats).catch(() => {});
+      syncSessionsAfterMutation(prevSessions);
     } catch (error) { showMessage(error.message || 'Gagal menyimpan tugas ke backend.', 'Gagal Tambah Tugas'); throw error; }
-  }, [subjects, showMessage]);
+  }, [subjects, showMessage, sessions, syncSessionsAfterMutation]);
 
   const toggleTask = useCallback(async (task) => {
     const next = task.serverStatus === 'done' || task.status === 'selesai' ? 'pending' : 'done';
     try {
+      const prevSessions = sessions;
       const updated = await tasksApi.updateTaskStatus(task.id, next);
       setTasks((items) => items.map((item) => item.id === task.id ? { ...item, ...updated } : item));
       setStats(await statsApi.getOverview());
+      syncSessionsAfterMutation(prevSessions);
     } catch (error) { showMessage(error.message || 'Gagal memperbarui status tugas.', 'Gagal Update Tugas'); }
-  }, [showMessage]);
+  }, [showMessage, sessions, syncSessionsAfterMutation]);
 
   const deleteTask = useCallback(async (task) => {
-    try { await tasksApi.deleteTask(task.id); setTasks((items) => items.filter((item) => item.id !== task.id)); showMessage('Tugas berhasil dihapus dari database.', 'Tugas Dihapus'); }
-    catch (error) { showMessage(error.message || 'Gagal menghapus tugas.', 'Gagal Hapus Tugas'); }
-  }, [showMessage]);
+    try {
+      const prevSessions = sessions;
+      await tasksApi.deleteTask(task.id);
+      setTasks((items) => items.filter((item) => item.id !== task.id));
+      showMessage('Tugas berhasil dihapus dari database.', 'Tugas Dihapus');
+      syncSessionsAfterMutation(prevSessions);
+    } catch (error) { showMessage(error.message || 'Gagal menghapus tugas.', 'Gagal Hapus Tugas'); }
+  }, [showMessage, sessions, syncSessionsAfterMutation]);
 
   const updateProgress = useCallback(async (task, progress) => {
     try { const updated = await tasksApi.updateTaskProgress(task.id, progress); setTasks((items) => items.map((item) => item.id === task.id ? { ...item, ...updated } : item)); }
@@ -204,25 +230,65 @@ export default function useAppData(showMessage) {
   }, [showMessage]);
 
   const addSchedule = useCallback(async (input) => {
-    try { const created = await schedulesApi.createSchedule(input); setSchedules((items) => [...items, created]); showMessage('Jadwal berhasil disimpan.', 'Jadwal Ditambahkan'); }
-    catch (error) { showMessage(error.message || 'Gagal menyimpan jadwal.', error.status === 409 ? 'Konflik Jadwal' : 'Gagal Simpan'); throw error; }
+    try {
+      const created = await schedulesApi.createSchedule(input);
+      setSchedules((items) => [...items, created]);
+      showMessage('Jadwal berhasil disimpan.', 'Jadwal Ditambahkan');
+      sessionsApi.getSessions({ status: 'planned' }).then((s) => Array.isArray(s) && setSessions(s)).catch(() => {});
+    } catch (error) { showMessage(error.message || 'Gagal menyimpan jadwal.', error.status === 409 ? 'Konflik Jadwal' : 'Gagal Simpan'); throw error; }
   }, [showMessage]);
   const deleteSchedule = useCallback(async (schedule) => {
-    try { await schedulesApi.deleteSchedule(schedule.id); setSchedules((items) => items.filter((item) => item.id !== schedule.id)); }
-    catch (error) { showMessage(error.message || 'Gagal menghapus jadwal.', 'Gagal Hapus Jadwal'); }
+    try {
+      await schedulesApi.deleteSchedule(schedule.id);
+      setSchedules((items) => items.filter((item) => item.id !== schedule.id));
+      sessionsApi.getSessions({ status: 'planned' }).then((s) => Array.isArray(s) && setSessions(s)).catch(() => {});
+    } catch (error) { showMessage(error.message || 'Gagal menghapus jadwal.', 'Gagal Hapus Jadwal'); }
   }, [showMessage]);
 
   const reschedule = useCallback(async () => {
-    try { const result = await sessionsApi.rescheduleSessions(); setSessions(result.sessions); showMessage(result.message || 'Urutan sesi belajar diperbarui oleh backend.', 'Adaptive Rescheduling'); }
-    catch (error) { showMessage(error.message || 'Belum ada sesi yang dapat disusun ulang.', 'Adaptive Rescheduling'); }
+    try {
+      const result = await sessionsApi.rescheduleSessions();
+      if (result?.sessions) setSessions(result.sessions);
+      showMessage(result?.message || 'Jadwal kamu sudah paling pas', 'Jadwal Belajar');
+      return result;
+    } catch (error) {
+      if (error?.status === 502 || error?.status === 503) {
+        showMessage('AI sedang sibuk. Jadwal lama tetap dipakai.', 'AI Sibuk');
+      } else {
+        showMessage(error.message || 'Jadwal belajar belum dapat disusun ulang.', 'Jadwal Belajar');
+      }
+      throw error;
+    }
   }, [showMessage]);
-  const acceptSession = useCallback(async (session) => {
-    try { const updated = await sessionsApi.acceptRecommendation(session.id); setSessions((items) => items.map((item) => item.id === session.id ? updated : item)); }
-    catch (error) { showMessage(error.message || 'Gagal menerima rekomendasi.', 'Gagal'); }
+
+  const undoScheduleChange = useCallback(async (isExpired) => {
+    if (isExpired) {
+      showMessage('Waktu membatalkan sudah lewat.', 'Batas Waktu');
+      return;
+    }
+    try {
+      const result = await sessionsApi.undoScheduleRecommendation();
+      if (result?.sessions) {
+        setSessions(result.sessions);
+        showMessage(result.message || 'Jadwal berhasil dikembalikan ke kondisi sebelumnya.', 'Jadwal Dikembalikan');
+      }
+    } catch (err) {
+      if (err.status === 404) {
+        showMessage('Jadwal sebelumnya sudah tidak tersedia.', 'Tidak Tersedia');
+      } else {
+        showMessage(err.message || 'Gagal membatalkan perubahan jadwal.', 'Gagal');
+      }
+    }
   }, [showMessage]);
-  const rejectSession = useCallback(async (session) => {
-    try { await sessionsApi.rejectRecommendation(session.id); setSessions((items) => items.filter((item) => item.id !== session.id)); }
-    catch (error) { showMessage(error.message || 'Gagal menolak rekomendasi.', 'Gagal'); }
+
+  const editSession = useCallback(async ({ id, sessionDate, startTime, duration }) => {
+    try {
+      const updated = await sessionsApi.updateSession(id, { sessionDate, startTime, duration });
+      setSessions((items) => items.map((item) => item.id === id ? { ...item, ...updated, isPinned: true } : item));
+      showMessage('Sesi ini kamu atur sendiri — tidak akan diubah otomatis.', 'Sesi Disimpan');
+    } catch (err) {
+      showMessage(err.message || 'Gagal menyimpan penyesuaian sesi.', 'Gagal');
+    }
   }, [showMessage]);
 
   const markAllRead = useCallback(async () => {
@@ -249,8 +315,12 @@ export default function useAppData(showMessage) {
     catch (error) { showMessage(error.message || 'Preferensi belum dapat dimuat.', 'Gagal Memuat Preferensi'); }
   }, [showMessage]);
   const savePreferences = useCallback(async (value) => {
-    try { await auth.updatePreferences(value); setPreferences(value); showMessage('Preferensi belajar tersimpan.', 'Preferensi Diperbarui'); }
-    catch (error) { showMessage(error.message || 'Preferensi belum dapat disimpan.', 'Gagal Menyimpan'); throw error; }
+    try {
+      await auth.updatePreferences(value);
+      setPreferences(value);
+      showMessage('Preferensi belajar tersimpan.', 'Preferensi Diperbarui');
+      sessionsApi.getSessions({ status: 'planned' }).then((s) => Array.isArray(s) && setSessions(s)).catch(() => {});
+    } catch (error) { showMessage(error.message || 'Preferensi belum dapat disimpan.', 'Gagal Menyimpan'); throw error; }
   }, [showMessage]);
 
   const uploadAvatar = useCallback(async (asset) => {
@@ -261,5 +331,14 @@ export default function useAppData(showMessage) {
     } catch (error) { showMessage(error.message || 'Foto profil belum dapat diunggah.', 'Gagal Unggah Foto'); }
   }, [showMessage]);
 
-  return { isLoggedIn, setIsLoggedIn, authLoading, loading, dataError, user, setUser, tasks, subjects, schedules, sessions, notifications, predictions, stats, preferences, login, logout, refresh, addTask, toggleTask, deleteTask, updateProgress, createSubtask, toggleSubtask, addSubject, updateSubject, deleteSubject, addSchedule, deleteSchedule, reschedule, acceptSession, rejectSession, markAllRead, markRead, generatePrediction, predictionFeedback, loadPreferences, savePreferences, uploadAvatar };
+  return {
+    isLoggedIn, setIsLoggedIn, authLoading, loading, dataError, user, setUser,
+    tasks, subjects, schedules, sessions, notifications, predictions, stats, preferences,
+    undoToastVisible, setUndoToastVisible,
+    login, logout, refresh, addTask, toggleTask, deleteTask, updateProgress,
+    createSubtask, toggleSubtask, addSubject, updateSubject, deleteSubject,
+    addSchedule, deleteSchedule, reschedule, undoScheduleChange, editSession,
+    markAllRead, markRead, generatePrediction, predictionFeedback,
+    loadPreferences, savePreferences, uploadAvatar,
+  };
 }

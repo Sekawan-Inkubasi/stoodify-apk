@@ -51,6 +51,7 @@ export const ENDPOINTS = {
   AI_CHAT: '/ai/chat',
   AI_SCHEDULE_GENERATE: '/ai/schedule-recommendations/generate',
   AI_SCHEDULE_RECOMMENDATIONS: '/ai/schedule-recommendations',
+  AI_SCHEDULE_UNDO: '/ai/schedule-recommendations/undo',
   AI_SCHEDULE_ACCEPT: (id) => `/ai/schedule-recommendations/${id}/accept`,
   AI_SCHEDULE_REJECT: (id) => `/ai/schedule-recommendations/${id}/reject`,
   AI_RESCHEDULE: '/ai/reschedule',

@@ -7,7 +7,7 @@ const tabs = [
   { id: 'home', label: 'Beranda', Icon: House },
   { id: 'calendar', label: 'Kalender', Icon: CalendarDays },
   { id: 'tasks', label: 'Tugas', Icon: CheckSquare },
-  { id: 'ai-plan', label: 'Rencana AI', Icon: Sparkles },
+  { id: 'ai-plan', label: 'Jadwal Belajar', Icon: Sparkles },
   { id: 'profile', label: 'Profil', Icon: UserRound },
 ];
 

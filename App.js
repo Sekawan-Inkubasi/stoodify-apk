@@ -24,6 +24,8 @@ import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { PreferencesModal, ProModal } from './src/components/AccountModals';
 import { AppText } from './src/components/ui';
 import DraggableAssistantTab from './src/components/DraggableAssistantTab';
+import UndoToast from './src/components/UndoToast';
+import EditSessionModal from './src/components/EditSessionModal';
 import { colors } from './src/constants/theme';
 import useAppData from './src/hooks/useAppData';
 
@@ -38,6 +40,7 @@ function StoodifyApp() {
   const [predictionsVisible, setPredictionsVisible] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
   const [proVisible, setProVisible] = useState(false);
+  const [editingSession, setEditingSession] = useState(null);
   const [preferencesVisible, setPreferencesVisible] = useState(false);
   const [scheduleDay, setScheduleDay] = useState('Senin');
   const [webFallback, setWebFallback] = useState(false);
@@ -127,17 +130,19 @@ function StoodifyApp() {
         {activeTab === 'home' ? <HomeScreen {...screenProps} onTab={setActiveTab} onAddTask={() => setAddTaskVisible(true)} onFocus={openFocus} onPredictions={() => setPredictionsVisible(true)} onSchedule={() => setActiveTab('calendar')} onNotifications={() => setNotificationsVisible(true)} onSelectTask={setDetailTask} onToggleTask={data.toggleTask} /> : null}
         {activeTab === 'tasks' ? <TasksScreen {...screenProps} onOpenTask={setDetailTask} onToggle={data.toggleTask} onAdd={() => setAddTaskVisible(true)} onManageSubjects={() => setSubjectModalVisible(true)} /> : null}
         {activeTab === 'calendar' ? <CalendarScreen {...screenProps} onAddSchedule={(day) => { setScheduleDay(day); setAddScheduleVisible(true); }} onManageSubjects={() => setSubjectModalVisible(true)} onDeleteSchedule={handleDeleteSchedule} onFocus={openFocus} /> : null}
-        {activeTab === 'ai-plan' ? <AIPlanScreen {...screenProps} onReschedule={data.reschedule} onAccept={data.acceptSession} onReject={data.rejectSession} onFocus={openFocus} onChat={() => setChatVisible(true)} /> : null}
+        {activeTab === 'ai-plan' ? <AIPlanScreen {...screenProps} onReschedule={data.reschedule} onFocus={openFocus} onChat={() => setChatVisible(true)} onEditSession={setEditingSession} /> : null}
         {activeTab === 'profile' ? <ProfileScreen {...screenProps} subjectsCount={safeSubjects.length} onAvatar={handleAvatar} onManageSubjects={() => setSubjectModalVisible(true)} onHelp={() => showMessage('Untuk bantuan, hubungi tim Stoodify melalui kontak dukungan sekolah.', 'Pusat Bantuan Stoodify')} onPro={() => setProVisible(true)} onLogout={handleLogout} onPreferences={loadPreferences} onWebFallback={() => setWebFallback(true)} /> : null}
       </View>
       <BottomTabs active={activeTab} onChange={setActiveTab} urgentCount={urgentCount} bottom={Math.max(14, insets.bottom + 8)} />
       <DraggableAssistantTab onPress={() => setChatVisible(true)} />
+      <UndoToast visible={data.undoToastVisible} onView={() => setActiveTab('ai-plan')} onUndo={data.undoScheduleChange} onDismiss={() => data.setUndoToastVisible(false)} bottom={Math.max(14, insets.bottom + 8) + 68} />
     </>}
 
     <AddTaskModal visible={addTaskVisible} onClose={() => setAddTaskVisible(false)} subjects={data.subjects} onSubmit={data.addTask} onManageSubjects={() => setSubjectModalVisible(true)} showMessage={showMessage} />
     <AddScheduleModal visible={addScheduleVisible} onClose={() => setAddScheduleVisible(false)} subjects={data.subjects} defaultDay={scheduleDay} onSubmit={data.addSchedule} onManageSubjects={() => setSubjectModalVisible(true)} />
     <ManageSubjectsModal visible={subjectModalVisible} onClose={() => setSubjectModalVisible(false)} subjects={data.subjects} onCreate={data.addSubject} onUpdate={data.updateSubject} onDelete={data.deleteSubject} />
     <TaskDetailModal task={selectedTask} visible={Boolean(detailTask)} onClose={() => setDetailTask(null)} onToggle={async (task) => { await data.toggleTask(task); setDetailTask(null); }} onDelete={async (task) => { await data.deleteTask(task); setDetailTask(null); }} onFocus={(task) => { setDetailTask(null); openFocus(task); }} onProgress={data.updateProgress} onCreateSubtask={data.createSubtask} onToggleSubtask={data.toggleSubtask} />
+    <EditSessionModal visible={Boolean(editingSession)} session={editingSession} onClose={() => setEditingSession(null)} onSubmit={data.editSession} />
     <FocusTimerModal visible={focus.visible} task={focus.task} initialMinutes={focus.minutes} onClose={() => setFocus((value) => ({ ...value, visible: false }))} onComplete={() => data.refresh()} />
     <NotificationsModal visible={notificationsVisible} onClose={() => setNotificationsVisible(false)} notifications={data.notifications} onMarkAll={data.markAllRead} onMarkRead={data.markRead} loading={data.loading} />
     <PredictionsModal visible={predictionsVisible} onClose={() => setPredictionsVisible(false)} subjects={data.subjects} predictions={data.predictions} onGenerate={data.generatePrediction} onFeedback={data.predictionFeedback} busy={data.loading} />

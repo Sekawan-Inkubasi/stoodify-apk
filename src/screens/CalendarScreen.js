@@ -4,7 +4,7 @@ import { BookOpen, CalendarDays, Clock3, Plus, Trash2 } from "lucide-react-nativ
 import { AppText, Button, Card, EmptyState, Header, Loading, Pill, Screen, SectionTitle } from "../components/ui";
 import { colors } from "../constants/theme";
 
-const days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
+const days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
 function getLocalDateString(dateObj = new Date()) {
   const y = dateObj.getFullYear();

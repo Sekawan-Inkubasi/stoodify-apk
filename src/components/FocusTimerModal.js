@@ -36,6 +36,7 @@ export default function FocusTimerModal({
     active,
     ambient,
     isCompleted,
+    volume: 1.0,
   });
   useEffect(() => {
     const seconds =
@@ -110,7 +111,7 @@ export default function FocusTimerModal({
             </View>
           </View>
           <View style={styles.presets}>
-            {[0.2, 45, 60].map((minutes) => (
+            {[25, 45, 60].map((minutes) => (
               <Pill
                 key={minutes}
                 title={`${minutes}m`}

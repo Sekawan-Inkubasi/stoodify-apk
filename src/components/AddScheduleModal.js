@@ -5,7 +5,7 @@ import ModalSheet from './ModalSheet';
 import { AppText, Button, Field, Pill } from './ui';
 import { colors } from '../constants/theme';
 
-const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
 export default function AddScheduleModal({ visible, onClose, subjects, defaultDay, onSubmit, onManageSubjects }) {
   const [day, setDay] = useState(defaultDay || 'Senin');

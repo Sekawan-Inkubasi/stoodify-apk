@@ -33,6 +33,7 @@ export default function useFocusAudio({
   active = false,
   ambient = false,
   isCompleted = false,
+  volume = 1.0,
 }) {
   const [isSupported, setIsSupported] = useState(Boolean(expoAudioModule?.createAudioPlayer));
   const ambientPlayerRef = useRef(null);
@@ -50,13 +51,13 @@ export default function useFocusAudio({
       if (ambientAudioSource?.uri && !ambientPlayerRef.current) {
         const player = expoAudioModule.createAudioPlayer(ambientAudioSource);
         player.loop = true;
-        player.volume = 0.55;
+        player.volume = Math.max(0, Math.min(1, Number(volume) || 1.0));
         ambientPlayerRef.current = player;
       }
       if (bellAsset && !bellPlayerRef.current) {
         const player = expoAudioModule.createAudioPlayer(bellAsset);
         player.loop = false;
-        player.volume = 0.85;
+        player.volume = 1.0;
         bellPlayerRef.current = player;
       }
       setIsSupported(true);
@@ -87,6 +88,7 @@ export default function useFocusAudio({
     if (!ambientPlayer) return;
 
     try {
+      ambientPlayer.volume = Math.max(0, Math.min(1, Number(volume) || 1.0));
       if (visible && active && ambient && !isCompleted) {
         ambientPlayer.play();
       } else {
@@ -95,7 +97,7 @@ export default function useFocusAudio({
     } catch (err) {
       console.warn("[useFocusAudio] Error toggling ambient playback:", err?.message || err);
     }
-  }, [visible, active, ambient, isCompleted]);
+  }, [visible, active, ambient, isCompleted, volume]);
 
   // Handle completion bell chime & haptic feedback when timer hits 00:00
   useEffect(() => {
