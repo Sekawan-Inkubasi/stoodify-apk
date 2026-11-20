@@ -51,7 +51,7 @@ export function mapTaskToUI(task) {
   return {
     id: String(task.id),
     title: task.title,
-    subjectId: String(task.subject_id),
+    subjectId: String(task.subject_id ?? task.subjectId ?? task.subject?.id ?? ''),
     subject: task.subject ? mapSubjectToUI(task.subject) : null,
     description: task.description || '',
     notes: task.notes || '',

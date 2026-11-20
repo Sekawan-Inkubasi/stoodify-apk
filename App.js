@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BackHandler, Modal, Platform, Pressable, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -117,7 +117,16 @@ function StoodifyApp() {
   const safeSchedules = Array.isArray(data.schedules) ? data.schedules.filter(Boolean) : [];
   const safePredictions = Array.isArray(data.predictions) ? data.predictions.filter(Boolean) : [];
   const unreadCount = safeNotifications.filter((item) => !item.isRead).length;
-  const urgentCount = safeTasks.filter((task) => task.status !== 'selesai' && Number(task.priorityScore) >= 60).length;
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const urgentCount = safeTasks.filter((task) => {
+    if (task.status === 'selesai') return false;
+    if (!task.deadline) return Number(task.priorityScore) >= 85;
+    const d = new Date(task.deadline);
+    if (Number.isNaN(d.getTime())) return Number(task.priorityScore) >= 85;
+    const deadlineStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return deadlineStr <= todayStr || Number(task.priorityScore) >= 85;
+  }).length;
 
   const screenProps = {
     user: data.user,

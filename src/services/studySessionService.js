@@ -5,7 +5,10 @@ import { mapTaskToUI } from './taskService';
 export function mapSessionToUI(session) {
   if (!session) return null;
 
-  const dateStr = session.session_date
+  const dateMatch = session.session_date ? String(session.session_date).match(/^(\d{4}-\d{2}-\d{2})/) : null;
+  const dateStr = dateMatch
+    ? dateMatch[1]
+    : session.session_date
     ? new Date(session.session_date).toISOString().split('T')[0]
     : '';
 

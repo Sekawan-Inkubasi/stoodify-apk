@@ -1,15 +1,15 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import {
   CheckCircle2,
   Circle,
   Search,
+  SearchX,
   SlidersHorizontal,
   Sparkles,
 } from "lucide-react-native";
 import {
   AppText,
-  Card,
   EmptyState,
   Field,
   Header,
@@ -25,7 +25,22 @@ const filters = [
   { id: "done", label: "Tuntas" },
 ];
 
-function TaskCard({ task, onOpen, onToggle }) {
+function getSubjectPillLabel(item, allSubjects) {
+  if (!item) return "";
+  const name = item.name || "";
+  const sameCodeCount = allSubjects.filter(
+    (s) => (s.code || s.name?.slice(0, 3)) === (item.code || name.slice(0, 3)),
+  ).length;
+  if (sameCodeCount > 1) {
+    if (/indonesia/i.test(name)) return "B. Indo";
+    if (/inggris/i.test(name)) return "B. Ingg";
+    if (/jawa/i.test(name)) return "B. Jawa";
+    return name.length > 7 ? `${name.slice(0, 6)}.` : name;
+  }
+  return item.code || (name.length > 8 ? `${name.slice(0, 7)}.` : name);
+}
+
+function TaskCard({ task, onOpen, onToggle, subjectName }) {
   const done = task.status === "selesai";
   const priorityColor =
     Number(task.priorityScore) >= 80
@@ -57,7 +72,7 @@ function TaskCard({ task, onOpen, onToggle }) {
           {task.title}
         </AppText>
         <AppText style={styles.taskSub}>
-          {task.subject?.name || "Mata pelajaran"} ·{" "}
+          {subjectName || task.subject?.name || "Mata pelajaran"} ·{" "}
           {new Date(task.deadline).toLocaleDateString("id-ID", {
             day: "numeric",
             month: "short",
@@ -97,6 +112,14 @@ export default function TasksScreen({
   const safeTasks = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
   const safeSubjects = Array.isArray(subjects) ? subjects.filter(Boolean) : [];
 
+  const subjectMap = useMemo(() => {
+    const map = new Map();
+    safeSubjects.forEach((s) => {
+      if (s?.id) map.set(String(s.id), s);
+    });
+    return map;
+  }, [safeSubjects]);
+
   const visible = useMemo(
     () =>
       safeTasks.filter((task) => {
@@ -106,11 +129,13 @@ export default function TasksScreen({
         if (filter === "done" && task.status !== "selesai") return false;
         if (subject !== "all" && String(task.subjectId) !== subject)
           return false;
-        return `${task.title || ""} ${task.subject?.name || ""}`
+        const subjName =
+          task.subject?.name || subjectMap.get(String(task.subjectId))?.name || "";
+        return `${task.title || ""} ${subjName}`
           .toLowerCase()
           .includes((query || "").toLowerCase());
       }),
-    [safeTasks, filter, subject, query],
+    [safeTasks, filter, subject, query, subjectMap],
   );
 
   return (
@@ -139,22 +164,28 @@ export default function TasksScreen({
       </View>
       <View style={styles.subjectRow}>
         <SlidersHorizontal size={15} color={colors.primary} />
-        <Pill
-          title="Semua Mapel"
-          active={subject === "all"}
-          onPress={() => setSubject("all")}
-        />
-        {safeSubjects.slice(0, 3).map((item) => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.subjectScroll}
+        >
           <Pill
-            key={item.id}
-            title={item.code || item.name}
-            active={subject === String(item.id)}
-            onPress={() => setSubject(String(item.id))}
+            title="Semua Mapel"
+            active={subject === "all"}
+            onPress={() => setSubject("all")}
           />
-        ))}
-        <Pressable onPress={onManageSubjects}>
-          <AppText style={styles.manage}>Atur Mapel</AppText>
-        </Pressable>
+          {safeSubjects.map((item) => (
+            <Pill
+              key={item.id}
+              title={getSubjectPillLabel(item, safeSubjects)}
+              active={subject === String(item.id)}
+              onPress={() => setSubject(String(item.id))}
+            />
+          ))}
+          <Pressable onPress={onManageSubjects} style={styles.manageBtn}>
+            <AppText style={styles.manage}>Atur Mapel</AppText>
+          </Pressable>
+        </ScrollView>
       </View>
       {loading && !safeTasks.length ? (
         <Loading label="Menghubungkan & memuat daftar tugas..." />
@@ -163,13 +194,14 @@ export default function TasksScreen({
           <TaskCard
             key={task.id || String(Math.random())}
             task={task}
+            subjectName={task.subject?.name || subjectMap.get(String(task.subjectId))?.name}
             onOpen={onOpenTask}
             onToggle={onToggle}
           />
         ))
       ) : (
         <EmptyState
-          icon={filter === "urgent" ? Sparkles : Circle}
+          icon={filter === "urgent" ? Sparkles : SearchX}
           title={
             safeTasks.length ? "Tidak Ada Tugas yang Cocok" : "Belum Ada Tugas"
           }
@@ -189,6 +221,8 @@ export default function TasksScreen({
 const styles = StyleSheet.create({
   filters: { flexDirection: "row", gap: 7 },
   subjectRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  subjectScroll: { flexDirection: "row", alignItems: "center", gap: 6, paddingRight: 8 },
+  manageBtn: { paddingVertical: 6, paddingHorizontal: 4 },
   manage: {
     color: colors.primary,
     fontSize: 9,

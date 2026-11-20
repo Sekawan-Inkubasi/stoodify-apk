@@ -183,13 +183,6 @@ export default function ProfileScreen({
         />
         <View style={styles.divider} />
         <MenuRow
-          icon={Globe2}
-          title="Buka Versi Web Darurat"
-          subtitle="Gunakan versi web Stoodify bila diperlukan"
-          onPress={onWebFallback}
-        />
-        <View style={styles.divider} />
-        <MenuRow
           icon={LogOut}
           title="Keluar dari Akun"
           subtitle="Kembali ke layar masuk"

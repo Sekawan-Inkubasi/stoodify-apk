@@ -1,15 +1,6 @@
-// Header Note: AIPlanScreen menyajikan jadwal belajar adaptif, status pinned, integrasi focus timer, dan rate-limit countdown. Batas toleransi <= 400 baris.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import {
-  CalendarClock,
-  ChevronRight,
-  Clock3,
-  Info,
-  Pin,
-  Sparkles,
-  Zap,
-} from "lucide-react-native";
+import { CalendarClock, Info, Zap } from "lucide-react-native";
 import {
   AppText,
   Card,
@@ -20,11 +11,20 @@ import {
   Screen,
   SectionTitle,
 } from "../components/ui";
+import StudySessionCard from "../components/StudySessionCard";
 import { colors } from "../constants/theme";
+
+function getLocalDateString(d = new Date()) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export default function AIPlanScreen({
   sessions = [],
   tasks = [],
+  subjects = [],
   loading = false,
   onReschedule,
   onFocus,
@@ -38,6 +38,15 @@ export default function AIPlanScreen({
 
   const safeSessions = Array.isArray(sessions) ? sessions.filter(Boolean) : [];
   const safeTasks = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
+  const safeSubjects = Array.isArray(subjects) ? subjects.filter(Boolean) : [];
+
+  const subjectMap = useMemo(() => {
+    const map = new Map();
+    safeSubjects.forEach((s) => {
+      if (s?.id) map.set(String(s.id), s);
+    });
+    return map;
+  }, [safeSubjects]);
 
   useEffect(() => {
     return () => {
@@ -74,16 +83,18 @@ export default function AIPlanScreen({
     }
   };
 
+  const today = useMemo(() => getLocalDateString(), []);
+
   const visible = useMemo(
     () =>
       safeSessions.filter((session) => {
         if (!session) return false;
-        const today = new Date().toISOString().slice(0, 10);
-        if (filter === "today") return session.date === today;
-        if (filter === "upcoming") return String(session.date || "") >= today;
+        const sessionDate = String(session.date || "");
+        if (filter === "today") return sessionDate === today;
+        if (filter === "upcoming") return sessionDate > today;
         return true;
       }),
-    [safeSessions, filter],
+    [safeSessions, filter, today],
   );
 
   const hasFallback = useMemo(
@@ -93,20 +104,19 @@ export default function AIPlanScreen({
 
   const workload = safeTasks
     .filter((task) => task.status !== "selesai")
-    .reduce(
-      (sum, task) => sum + (Number(task.estimatedDurationMinutes) || 0),
-      0,
-    );
+    .reduce((sum, task) => sum + (Number(task.estimatedDurationMinutes) || 0), 0);
 
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  weekStart.setHours(0, 0, 0, 0);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-  const weeklySessions = safeSessions.filter((session) => {
-    const date = new Date(`${session.date}T12:00:00`);
-    return !Number.isNaN(date.getTime()) && date >= weekStart && date < weekEnd;
-  }).length;
+  const weeklySessions = useMemo(() => {
+    const ws = new Date();
+    ws.setDate(ws.getDate() - ((ws.getDay() + 6) % 7));
+    ws.setHours(0, 0, 0, 0);
+    const we = new Date(ws);
+    we.setDate(we.getDate() + 7);
+    return safeSessions.filter((s) => {
+      const d = new Date(`${s.date}T12:00:00`);
+      return !Number.isNaN(d.getTime()) && d >= ws && d < we;
+    }).length;
+  }, [safeSessions]);
 
   return (
     <Screen>
@@ -192,75 +202,46 @@ export default function AIPlanScreen({
       </View>
 
       <View style={styles.filters}>
-        <Pill title="Semua" active={filter === "all"} onPress={() => setFilter("all")} />
-        <Pill title="Hari Ini" active={filter === "today"} onPress={() => setFilter("today")} />
-        <Pill title="Mendatang" active={filter === "upcoming"} onPress={() => setFilter("upcoming")} />
+        <Pill title={`Semua (${safeSessions.length})`} active={filter === "all"} onPress={() => setFilter("all")} />
+        <Pill title={`Hari Ini (${safeSessions.filter((s) => String(s?.date || "") === today).length})`} active={filter === "today"} onPress={() => setFilter("today")} />
+        <Pill title={`Mendatang (${safeSessions.filter((s) => String(s?.date || "") > today).length})`} active={filter === "upcoming"} onPress={() => setFilter("upcoming")} />
       </View>
 
       {loading && !safeSessions.length ? (
         <Loading label="Sedang menyusun jadwal belajar…" />
       ) : visible.length ? (
-        visible.map((session, index) => (
-          <Card key={session.id || String(index)} style={styles.session}>
-            <View style={styles.rank}>
-              <AppText style={styles.rankText}>{index + 1}</AppText>
-            </View>
-            <View style={styles.sessionCopy}>
-              <View style={styles.sessionMeta}>
-                <AppText style={styles.date}>
-                  {session.date
-                    ? new Date(`${session.date}T12:00:00`).toLocaleDateString("id-ID", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                      })
-                    : "Sesi belajar"}
-                </AppText>
-                <View style={styles.badgeRow}>
-                  {session.isPinned ? (
-                    <View style={styles.pinnedBadge}>
-                      <Pin size={10} color="#6366F1" />
-                      <AppText style={styles.pinnedText}>Diatur Sendiri</AppText>
-                    </View>
-                  ) : null}
-                  <AppText style={styles.status}>
-                    {session.status === "completed"
-                      ? "Selesai"
-                      : session.status === "skipped"
-                      ? "Terlewat"
-                      : "Terjadwal"}
-                  </AppText>
-                </View>
-              </View>
-
-              <AppText style={styles.sessionTitle}>{session.task?.title || "Tugas belajar"}</AppText>
-              <AppText style={styles.sessionSub}>
-                {session.task?.subject?.name || "Mata pelajaran"} · {session.startTime || "-"} ·{" "}
-                {session.durationMinutes || 45} menit
-              </AppText>
-
-              {session.reason ? (
-                <AppText style={styles.reason} numberOfLines={2}>
-                  {session.reason}
-                </AppText>
-              ) : null}
-
-              <View style={styles.sessionActions}>
-                <Pressable onPress={() => onFocus?.(session.task)} style={styles.focus}>
-                  <Clock3 size={13} color={colors.primary} />
-                  <AppText style={styles.focusText}>Mulai Fokus</AppText>
-                  <ChevronRight size={13} color={colors.primary} />
-                </Pressable>
-                {onEditSession ? (
-                  <Pressable onPress={() => onEditSession(session)} style={styles.editBtn}>
-                    <Pin size={12} color="#475569" />
-                    <AppText style={styles.editText}>Sesuaikan</AppText>
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
-          </Card>
-        ))
+        visible.map((session, index) => {
+          const resolvedSubject =
+            session.task?.subject?.name ||
+            subjectMap.get(String(session.task?.subjectId))?.name ||
+            "Mata pelajaran";
+          return (
+            <StudySessionCard
+              key={session.id || String(index)}
+              session={session}
+              index={index}
+              subjectName={resolvedSubject}
+              onFocus={onFocus}
+              onEditSession={onEditSession}
+            />
+          );
+        })
+      ) : filter !== "all" ? (
+        <EmptyState
+          icon={CalendarClock}
+          title={
+            filter === "today"
+              ? "Tidak Ada Sesi Hari Ini"
+              : "Tidak Ada Sesi Mendatang"
+          }
+          subtitle={
+            filter === "today"
+              ? "Belum ada sesi belajar terjadwal untuk hari ini. Kamu bisa fokus ke tugas aktif atau melihat semua sesi."
+              : "Belum ada sesi belajar terjadwal setelah hari ini."
+          }
+          action="Lihat Semua Sesi"
+          onAction={() => setFilter("all")}
+        />
       ) : !safeTasks.length ? (
         <EmptyState
           icon={CalendarClock}
@@ -281,14 +262,7 @@ export default function AIPlanScreen({
 }
 
 const styles = StyleSheet.create({
-  assistant: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 16,
-    backgroundColor: colors.primary,
-    borderColor: "#3447E8",
-  },
+  assistant: { flexDirection: "row", alignItems: "center", gap: 10, padding: 16, backgroundColor: colors.primary, borderColor: "#3447E8" },
   assistantCopy: { flex: 1 },
   assistantEyebrow: { color: "#DCE8FF", fontFamily: "Poppins_700Bold", fontSize: 8, letterSpacing: 0.5 },
   assistantTitle: { color: "#fff", fontFamily: "Poppins_700Bold", fontSize: 12, marginTop: 5 },
@@ -319,22 +293,4 @@ const styles = StyleSheet.create({
   fallbackText: { color: "#0369A1", fontSize: 10, fontFamily: "Poppins_500Medium" },
   section: { marginTop: 4 },
   filters: { flexDirection: "row", gap: 6, marginVertical: 4 },
-  session: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
-  rank: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
-  rankText: { color: colors.primary, fontFamily: "Poppins_700Bold", fontSize: 10 },
-  sessionCopy: { flex: 1, gap: 4 },
-  sessionMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  date: { color: colors.muted, fontSize: 9, fontFamily: "Poppins_500Medium" },
-  badgeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  pinnedBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#EEF2FF", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  pinnedText: { color: "#6366F1", fontSize: 8, fontFamily: "Poppins_600SemiBold" },
-  status: { color: colors.primary, fontSize: 9, fontFamily: "Poppins_600SemiBold" },
-  sessionTitle: { fontFamily: "Poppins_700Bold", fontSize: 11, color: "#0F172A" },
-  sessionSub: { color: colors.muted, fontSize: 9 },
-  reason: { color: "#64748B", fontSize: 8, lineHeight: 12, backgroundColor: "#F8FAFC", padding: 6, borderRadius: 8 },
-  sessionActions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
-  focus: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#EFF6FF", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  focusText: { color: colors.primary, fontSize: 9, fontFamily: "Poppins_700Bold" },
-  editBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#F1F5F9", paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8 },
-  editText: { color: "#475569", fontSize: 9, fontFamily: "Poppins_600SemiBold" },
 });
