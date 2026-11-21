@@ -31,6 +31,9 @@ import EditSessionModal from './src/components/EditSessionModal';
 import { colors } from './src/constants/theme';
 import tokenStorage from './src/services/tokenStorage';
 import useAppData from './src/hooks/useAppData';
+import useDeepLink from './src/hooks/useDeepLink';
+import ResetPasswordModal from './src/components/auth/ResetPasswordModal';
+import VerifyingEmailOverlay from './src/components/auth/VerifyingEmailOverlay';
 
 function StoodifyApp() {
   const [activeTab, setActiveTab] = useState('home');
@@ -51,6 +54,7 @@ function StoodifyApp() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(null);
   const [onboardingForced, setOnboardingForced] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState('welcome');
+  const [prefilledAuthEmail, setPrefilledAuthEmail] = useState('');
   const [profileModalDismissed, setProfileModalDismissed] = useState(false);
   const insets = useSafeAreaInsets();
   const [fontsLoaded] = useFonts({
@@ -61,6 +65,27 @@ function StoodifyApp() {
   });
   const { showDialog, showMessage } = useDialog();
   const data = useAppData(showMessage);
+
+  const {
+    isVerifyingEmail,
+    resetPasswordToken,
+    clearResetPasswordToken,
+  } = useDeepLink({
+    isLoggedIn: data.isLoggedIn,
+    onVerifySuccess: () => {
+      setAuthInitialMode('login');
+      if (hasSeenOnboarding === false) {
+        setHasSeenOnboarding(true);
+      }
+    },
+    onResetPasswordRequested: () => {
+      if (hasSeenOnboarding === false) {
+        setHasSeenOnboarding(true);
+      }
+    },
+    refreshAppData: data.refresh,
+    showDialog,
+  });
 
   useEffect(() => {
     if (Platform.OS !== 'android') return undefined;
@@ -184,7 +209,12 @@ function StoodifyApp() {
         </SafeAreaView>
       ) : (
         <SafeAreaView edges={['top', 'bottom']} style={styles.authWrap}>
-          <AuthScreen initialMode={authInitialMode} onLogin={data.login} showMessage={showMessage} />
+          <AuthScreen
+            initialMode={authInitialMode}
+            onLogin={data.login}
+            showMessage={showMessage}
+            prefilledEmail={prefilledAuthEmail}
+          />
         </SafeAreaView>
       )
     ) : <>
@@ -224,6 +254,17 @@ function StoodifyApp() {
     <CompleteProfileModal visible={isGoogleProfileIncomplete && !profileModalDismissed} user={data.user} onClose={() => setProfileModalDismissed(true)} onSubmit={async (fields) => { await data.completeProfile(fields); setProfileModalDismissed(true); }} />
     <PreferencesModal visible={preferencesVisible} onClose={() => setPreferencesVisible(false)} value={data.preferences} onSave={data.savePreferences} busy={data.loading} />
     <ProModal visible={proVisible} onClose={() => setProVisible(false)} showMessage={showMessage} />
+    <ResetPasswordModal
+      visible={Boolean(resetPasswordToken)}
+      token={resetPasswordToken}
+      onClose={clearResetPasswordToken}
+      onSuccess={(email) => {
+        if (email) setPrefilledAuthEmail(email);
+        setAuthInitialMode('login');
+      }}
+      showDialog={showDialog}
+    />
+    <VerifyingEmailOverlay visible={isVerifyingEmail} />
   </View>;
 }
 

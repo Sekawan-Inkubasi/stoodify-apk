@@ -21,7 +21,8 @@ function isPublicAuthEndpoint(endpoint) {
     normalized.includes('/auth/login') ||
     normalized.includes('/auth/register') ||
     normalized.includes('/auth/refresh') ||
-    normalized.includes('/auth/password-reset')
+    normalized.includes('/auth/password-reset') ||
+    normalized.includes('/auth/verify-email')
   );
 }
 

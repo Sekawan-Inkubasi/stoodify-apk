@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  BackHandler, KeyboardAvoidingView, Linking, NativeModules,
+  BackHandler, KeyboardAvoidingView, NativeModules,
   Platform, Pressable, ScrollView, TurboModuleRegistry, View,
 } from "react-native";
 import { AppText } from "../components/ui";
@@ -11,6 +11,7 @@ import LoginForm from "../components/auth/LoginForm";
 import RegisterStepAccount from "../components/auth/RegisterStepAccount";
 import RegisterStepEducation from "../components/auth/RegisterStepEducation";
 import RegisterSuccessVerify from "../components/auth/RegisterSuccessVerify";
+import ForgotPasswordModal from "../components/auth/ForgotPasswordModal";
 import { styles } from "./AuthScreen.styles";
 
 function isNativeGoogleSigninAvailable() {
@@ -21,23 +22,18 @@ function isNativeGoogleSigninAvailable() {
   }
 }
 
-function extractTokenFromUrl(url) {
-  if (!url) return null;
-  try {
-    const match = url.match(/[?&]token=([^&]+)/);
-    return match ? decodeURIComponent(match[1]) : null;
-  } catch {
-    return null;
-  }
-}
-
-export default function AuthScreen({ onLogin, showMessage, initialMode = "welcome" }) {
+export default function AuthScreen({
+  onLogin,
+  showMessage,
+  initialMode = "welcome",
+  prefilledEmail = "",
+}) {
   const [mode, setMode] = useState(initialMode || "welcome");
   const [registerStep, setRegisterStep] = useState(1);
 
   // Form states
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefilledEmail || "");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +43,7 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
 
   useEffect(() => {
     if (initialMode) {
@@ -55,40 +52,13 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
     }
   }, [initialMode]);
 
-  // Deep Link listener untuk verifikasi email (stoodify://verify-email?token=...)
   useEffect(() => {
-    let isMounted = true;
-    const processUrl = async (url) => {
-      const token = extractTokenFromUrl(url);
-      if (!token || !isMounted) return;
-      setBusy(true);
-      try {
-        await authService.verifyEmail(token);
-        showMessage?.(
-          "Email berhasil diverifikasi! Sekarang kamu dapat masuk ke akun belajarmu.",
-          "Verifikasi Sukses"
-        );
-        if (isMounted) {
-          setMode("login");
-          setRegisterStep(1);
-        }
-      } catch (err) {
-        showMessage?.(
-          err.message || "Tautan verifikasi tidak valid atau sudah kedaluwarsa.",
-          "Verifikasi Gagal"
-        );
-      } finally {
-        if (isMounted) setBusy(false);
-      }
-    };
-
-    Linking.getInitialURL().then(processUrl);
-    const sub = Linking.addEventListener("url", (event) => processUrl(event.url));
-    return () => {
-      isMounted = false;
-      sub.remove();
-    };
-  }, [showMessage]);
+    if (prefilledEmail) {
+      setEmail(prefilledEmail);
+      setMode("login");
+      setRegisterStep(1);
+    }
+  }, [prefilledEmail]);
 
   const handleLoginSubmit = async () => {
     setError("");
@@ -255,12 +225,7 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
             showPassword={showPassword} setShowPassword={setShowPassword}
             busy={busy} error={error}
             onSubmit={handleLoginSubmit}
-            onForgotPassword={() =>
-              showMessage?.(
-                "Pemulihan kata sandi belum tersedia dari layar ini. Hubungi dukungan sekolah.",
-                "Lupa Kata Sandi"
-              )
-            }
+            onForgotPassword={() => setForgotModalVisible(true)}
             onGoogleSignIn={handleGoogleSignIn}
           />
         )}
@@ -289,6 +254,13 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
           </View>
         ) : null}
       </ScrollView>
+
+      <ForgotPasswordModal
+        visible={forgotModalVisible}
+        initialEmail={email}
+        onClose={() => setForgotModalVisible(false)}
+        showMessage={showMessage}
+      />
     </KeyboardAvoidingView>
   );
 }

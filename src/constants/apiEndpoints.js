@@ -13,6 +13,8 @@ export const ENDPOINTS = {
   AUTH_LOGOUT: '/auth/logout',
   AUTH_VERIFY_EMAIL: '/auth/verify-email',
   AUTH_VERIFY_RESEND: '/auth/verify-email/resend',
+  AUTH_PASSWORD_RESET_REQUEST: '/auth/password-reset/request',
+  AUTH_PASSWORD_RESET_CONFIRM: '/auth/password-reset/confirm',
 
   // Users & Preferences
   USER_ME: '/users/me',

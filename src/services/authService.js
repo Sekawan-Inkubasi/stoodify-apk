@@ -63,6 +63,20 @@ export async function verifyEmail(token) {
   });
 }
 
+export async function requestPasswordReset(email) {
+  return apiPost(ENDPOINTS.AUTH_PASSWORD_RESET_REQUEST, {
+    email: (email || '').trim(),
+  });
+}
+
+export async function confirmPasswordReset(token, password, confirmPassword) {
+  return apiPost(ENDPOINTS.AUTH_PASSWORD_RESET_CONFIRM, {
+    token: (token || '').trim(),
+    password,
+    confirm_password: confirmPassword || password,
+  });
+}
+
 export async function completeOnboarding(profileData) {
   return apiPatch(ENDPOINTS.USER_ONBOARDING, {
     school: (profileData?.school || '').trim(),
@@ -178,4 +192,8 @@ export default {
   updatePreferences,
   uploadAvatar,
   loginDemo,
+  verifyEmail,
+  resendVerification,
+  requestPasswordReset,
+  confirmPasswordReset,
 };
