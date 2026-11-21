@@ -21,19 +21,22 @@ const DURATION_OPTIONS = ['30', '45', '60', '90'];
 
 export default function OnboardingQuestionnaire({ step, data, onChange, onComplete }) {
   if (step === 3) {
+    const selectedGoals = Array.isArray(data?.selectedGoals) ? data.selectedGoals : [];
     return (
       <View style={styles.container}>
         <AppText style={styles.stepTitle}>Untuk apa kamu menggunakan Stoodify?</AppText>
         <AppText style={styles.stepSubtitle}>Pilih tujuan utamamu agar asisten AI dapat menyesuaikan rekomendasi belajar.</AppText>
         <View style={styles.optionsWrap}>
           {GOAL_OPTIONS.map(({ id, title, desc, Icon }) => {
-            const selected = data.selectedGoals.includes(id);
+            const selected = selectedGoals.includes(id);
             return (
               <Pressable
                 key={id}
                 onPress={() => {
-                  const next = selected ? data.selectedGoals.filter((g) => g !== id) : [...data.selectedGoals, id];
-                  onChange({ selectedGoals: next.length ? next : [id] });
+                  const next = selected
+                    ? selectedGoals.filter((g) => g !== id)
+                    : [...selectedGoals, id];
+                  onChange({ selectedGoals: next });
                 }}
                 style={({ pressed }) => [styles.optionCard, selected && styles.optionCardActive, pressed && styles.pressed]}
               >

@@ -27,7 +27,7 @@ export default function OnboardingScreen({ onComplete }) {
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   const [formData, setFormData] = useState({
-    selectedGoals: ['tasks'],
+    selectedGoals: [],
     schoolStart: '07:00',
     schoolEnd: '15:30',
     studyStart: '16:30',
@@ -81,18 +81,22 @@ export default function OnboardingScreen({ onComplete }) {
       session_duration: formData.sessionDuration,
       school_start: formData.schoolStart,
       school_end: formData.schoolEnd,
-      goals: formData.selectedGoals.join(','),
+      goals: (formData.selectedGoals || []).join(','),
     });
     onComplete?.(mode);
   }, [formData, onComplete]);
 
   const handleNext = useCallback(() => {
+    // Pada step 3 (kuisioner tujuan), wajib memilih minimal 1 pilihan
+    if (step === 3 && (!formData.selectedGoals || formData.selectedGoals.length === 0)) {
+      return;
+    }
     if (step < TOTAL_STEPS - 1) {
       setStep((s) => s + 1);
     } else {
       handleComplete('login');
     }
-  }, [step, handleComplete]);
+  }, [step, formData.selectedGoals, handleComplete]);
 
   const handleSkip = useCallback(() => {
     setStep(TOTAL_STEPS - 1);
