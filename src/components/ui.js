@@ -124,9 +124,12 @@ export function Field({
   placeholder,
   secureTextEntry,
   keyboardType = "default",
+  autoCapitalize,
+  autoCorrect,
   multiline,
   style,
   right,
+  ...rest
 }) {
   return (
     <View style={style}>
@@ -139,9 +142,12 @@ export function Field({
           placeholderTextColor="#94A3B8"
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
           multiline={multiline}
           textAlignVertical={multiline ? "top" : "center"}
           style={[styles.input, multiline && styles.multilineInput]}
+          {...rest}
         />
         {right}
       </View>

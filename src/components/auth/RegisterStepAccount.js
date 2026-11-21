@@ -52,10 +52,11 @@ export default function RegisterStepAccount({
       <Field
         label="Email Siswa / Sekolah"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(text) => setEmail(text.toLowerCase())}
         placeholder="nama@email.com"
         keyboardType="email-address"
         autoCapitalize="none"
+        autoCorrect={false}
       />
       <View style={styles.emailHint}>
         <Info size={12} color={colors.primary} />
@@ -69,6 +70,8 @@ export default function RegisterStepAccount({
         onChangeText={setPassword}
         placeholder="Minimal 8 karakter"
         secureTextEntry={!showPassword}
+        autoCapitalize="none"
+        autoCorrect={false}
         right={
           <Pressable
             onPress={() => setShowPassword(!showPassword)}
@@ -89,6 +92,8 @@ export default function RegisterStepAccount({
         onChangeText={setConfirm}
         placeholder="Ulangi kata sandi"
         secureTextEntry={!showPassword}
+        autoCapitalize="none"
+        autoCorrect={false}
       />
 
       <AppText style={styles.terms}>

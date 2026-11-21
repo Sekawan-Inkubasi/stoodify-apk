@@ -1,14 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  BackHandler,
-  KeyboardAvoidingView,
-  Linking,
-  NativeModules,
-  Platform,
-  Pressable,
-  ScrollView,
-  TurboModuleRegistry,
-  View,
+  BackHandler, KeyboardAvoidingView, Linking, NativeModules,
+  Platform, Pressable, ScrollView, TurboModuleRegistry, View,
 } from "react-native";
 import { AppText } from "../components/ui";
 import * as authService from "../services/authService";
@@ -147,9 +140,23 @@ export default function AuthScreen({ onLogin, showMessage, initialMode = "welcom
       );
       return;
     }
+
+    const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    if (!webClientId) {
+      showMessage?.(
+        "Fitur Google Sign-In belum dikonfigurasi. Harap tentukan EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID di file .env terlebih dahulu.",
+        "Konfigurasi Google Sign-In"
+      );
+      return;
+    }
+
     setBusy(true);
     try {
       const { GoogleSignin } = require("@react-native-google-signin/google-signin");
+      GoogleSignin.configure({
+        webClientId,
+        offlineAccess: false,
+      });
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const response = await GoogleSignin.signIn();
       const idToken = response?.data?.idToken || response?.idToken;

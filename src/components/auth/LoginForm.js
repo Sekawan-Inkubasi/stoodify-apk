@@ -22,10 +22,11 @@ export default function LoginForm({
       <Field
         label="Email Siswa"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(text) => setEmail(text.toLowerCase())}
         placeholder="nama@email.com"
         keyboardType="email-address"
         autoCapitalize="none"
+        autoCorrect={false}
       />
       <Field
         label="Kata Sandi"
@@ -33,6 +34,8 @@ export default function LoginForm({
         onChangeText={setPassword}
         placeholder="Masukkan kata sandi"
         secureTextEntry={!showPassword}
+        autoCapitalize="none"
+        autoCorrect={false}
         right={
           <Pressable
             onPress={() => setShowPassword(!showPassword)}
