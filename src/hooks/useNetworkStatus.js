@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
-import NetInfo from '@react-native-community/netinfo';
+import { NativeModules, TurboModuleRegistry } from 'react-native';
+
+let NetInfo = null;
+try {
+  if (NativeModules?.RNCNetInfo || TurboModuleRegistry?.get?.('RNCNetInfo')) {
+    const raw = require('@react-native-community/netinfo');
+    NetInfo = raw?.default || raw;
+  }
+} catch {
+  NetInfo = null;
+}
 
 let currentNetworkStatus = {
   isConnected: true,
@@ -10,6 +20,7 @@ let currentNetworkStatus = {
 const listeners = new Set();
 
 function updateStatus(state) {
+  if (!state) return;
   const isConnected = Boolean(state.isConnected);
   const isInternetReachable = state.isInternetReachable;
   const isOnline = Boolean(isConnected && isInternetReachable !== false);
@@ -30,9 +41,14 @@ function updateStatus(state) {
 // Global subscriber untuk NetInfo (dimulai sekali)
 let netInfoUnsubscribe = null;
 function ensureGlobalListener() {
+  if (!NetInfo) return;
   if (!netInfoUnsubscribe) {
-    netInfoUnsubscribe = NetInfo.addEventListener(updateStatus);
-    NetInfo.fetch().then(updateStatus).catch(() => {});
+    try {
+      netInfoUnsubscribe = NetInfo.addEventListener(updateStatus);
+      NetInfo.fetch().then(updateStatus).catch(() => {});
+    } catch {
+      netInfoUnsubscribe = null;
+    }
   }
 }
 
@@ -66,9 +82,14 @@ export default function useNetworkStatus() {
   return {
     ...status,
     isOnline: status.isOnline,
-    checkConnection: () => NetInfo.fetch().then((s) => {
-      updateStatus(s);
-      return currentNetworkStatus;
-    }),
+    checkConnection: () => {
+      if (!NetInfo?.fetch) return Promise.resolve(currentNetworkStatus);
+      return NetInfo.fetch()
+        .then((s) => {
+          updateStatus(s);
+          return currentNetworkStatus;
+        })
+        .catch(() => currentNetworkStatus);
+    },
   };
 }

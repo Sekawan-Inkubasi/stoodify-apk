@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from './asyncStorageAdapter';
 import * as tasksApi from './taskService';
 import * as schedulesApi from './scheduleService';
 import * as sessionsApi from './studySessionService';

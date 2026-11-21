@@ -33,6 +33,7 @@ import useAppData from './src/hooks/useAppData';
 
 function StoodifyApp() {
   const [activeTab, setActiveTab] = useState('home');
+  const [tasksFilter, setTasksFilter] = useState('active');
   const [addTaskVisible, setAddTaskVisible] = useState(false);
   const [addScheduleVisible, setAddScheduleVisible] = useState(false);
   const [subjectModalVisible, setSubjectModalVisible] = useState(false);
@@ -75,9 +76,15 @@ function StoodifyApp() {
     tokenStorage.getHasSeenOnboarding().then((seen) => setHasSeenOnboarding(Boolean(seen)));
   }, []);
 
-  const openFocus = useCallback((task = null, minutes = null) => {
-    const target = minutes || task?.estimatedDurationMinutes || 25;
-    setFocus({ visible: true, task, minutes: target });
+  const openFocus = useCallback((target = null, minutes = null) => {
+    const isSession = target && ('durationMinutes' in target || 'startTime' in target);
+    const resolvedTask = isSession ? target.task : target;
+    const resolvedMinutes =
+      minutes ||
+      (isSession ? target.durationMinutes : null) ||
+      resolvedTask?.estimatedDurationMinutes ||
+      25;
+    setFocus({ visible: true, task: resolvedTask || null, minutes: Number(resolvedMinutes) || 25 });
   }, []);
   const handleAvatar = useCallback(async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -112,6 +119,12 @@ function StoodifyApp() {
     });
   }, [data.deleteSchedule, showDialog]);
   const loadPreferences = useCallback(async () => { await data.loadPreferences(); setPreferencesVisible(true); }, [data.loadPreferences]);
+  const handleTabChange = useCallback((tab, options = {}) => {
+    setActiveTab(tab);
+    if (tab === 'tasks' && options?.filter) {
+      setTasksFilter(options.filter);
+    }
+  }, []);
 
   if (!fontsLoaded || data.authLoading) return <View style={styles.loading}><StatusBar barStyle="dark-content" backgroundColor={colors.canvas} /></View>;
   if (webFallback) return <EmergencyWebView onClose={() => setWebFallback(false)} />;
@@ -172,8 +185,8 @@ function StoodifyApp() {
       ) : null}
       {data.dataError ? <Pressable onPress={data.refresh} style={styles.dataError}><AppText style={styles.dataErrorText}>{data.dataError}  ·  Ketuk untuk coba lagi</AppText></Pressable> : null}
       <View style={styles.content}>
-        {activeTab === 'home' ? <HomeScreen {...screenProps} onTab={setActiveTab} onAddTask={() => setAddTaskVisible(true)} onFocus={openFocus} onPredictions={() => setPredictionsVisible(true)} onSchedule={() => setActiveTab('calendar')} onNotifications={() => setNotificationsVisible(true)} onSelectTask={setDetailTask} onToggleTask={data.toggleTask} /> : null}
-        {activeTab === 'tasks' ? <TasksScreen {...screenProps} onOpenTask={setDetailTask} onToggle={data.toggleTask} onAdd={() => setAddTaskVisible(true)} onManageSubjects={() => setSubjectModalVisible(true)} /> : null}
+        {activeTab === 'home' ? <HomeScreen {...screenProps} onTab={handleTabChange} onAddTask={() => setAddTaskVisible(true)} onFocus={openFocus} onPredictions={() => setPredictionsVisible(true)} onSchedule={() => setActiveTab('calendar')} onNotifications={() => setNotificationsVisible(true)} onSelectTask={setDetailTask} onToggleTask={data.toggleTask} /> : null}
+        {activeTab === 'tasks' ? <TasksScreen {...screenProps} initialFilter={tasksFilter} onOpenTask={setDetailTask} onToggle={data.toggleTask} onAdd={() => setAddTaskVisible(true)} onManageSubjects={() => setSubjectModalVisible(true)} /> : null}
         {activeTab === 'calendar' ? <CalendarScreen {...screenProps} onAddSchedule={(day) => { setScheduleDay(day); setAddScheduleVisible(true); }} onManageSubjects={() => setSubjectModalVisible(true)} onDeleteSchedule={handleDeleteSchedule} onFocus={openFocus} /> : null}
         {activeTab === 'ai-plan' ? <AIPlanScreen {...screenProps} onReschedule={data.reschedule} onFocus={openFocus} onChat={() => setChatVisible(true)} onEditSession={setEditingSession} /> : null}
         {activeTab === 'profile' ? <ProfileScreen {...screenProps} subjectsCount={safeSubjects.length} onAvatar={handleAvatar} onManageSubjects={() => setSubjectModalVisible(true)} onHelp={() => showMessage('Untuk bantuan, hubungi tim Stoodify melalui kontak dukungan sekolah.', 'Pusat Bantuan Stoodify')} onPro={() => setProVisible(true)} onLogout={handleLogout} onPreferences={loadPreferences} onWebFallback={() => setWebFallback(true)} onReplayOnboarding={() => setOnboardingForced(true)} /> : null}

@@ -111,14 +111,18 @@ export default function FocusTimerModal({
             </View>
           </View>
           <View style={styles.presets}>
-            {[0.2, 45, 60].map((minutes) => (
-              <Pill
-                key={minutes}
-                title={`${minutes}m`}
-                active={total === minutes * 60}
-                onPress={() => setDuration(minutes)}
-              />
-            ))}
+            {Array.from(
+              new Set([0.2, 25, 30, 45, 60, Math.round(total / 60)].filter((m) => typeof m === "number" && m > 0))
+            )
+              .sort((a, b) => a - b)
+              .map((minutes) => (
+                <Pill
+                  key={minutes}
+                  title={`${minutes}m`}
+                  active={total === minutes * 60}
+                  onPress={() => setDuration(minutes)}
+                />
+              ))}
           </View>
           <View style={styles.controls}>
             <Pressable onPress={reset} style={styles.control}>
@@ -224,7 +228,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     letterSpacing: 1,
   },
-  presets: { flexDirection: "row", gap: 8 },
+  presets: { flexDirection: "row", gap: 8, flexWrap: "wrap", justifyContent: "center" },
   controls: {
     flexDirection: "row",
     alignItems: "center",

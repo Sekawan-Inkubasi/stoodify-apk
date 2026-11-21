@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from './asyncStorageAdapter';
 
 const CACHE_KEYS = {
   tasks: 'stoodify_cache_tasks',

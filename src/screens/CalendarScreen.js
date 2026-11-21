@@ -164,7 +164,7 @@ export default function CalendarScreen({
                     {item.startTime || "-"} · {item.durationMinutes || 45} menit
                   </AppText>
                 </View>
-                <Pressable onPress={() => onFocus(item.task)}>
+                <Pressable onPress={() => onFocus(item.task, item.durationMinutes || 45)}>
                   <AppText style={styles.focus}>Fokus</AppText>
                 </Pressable>
               </View>

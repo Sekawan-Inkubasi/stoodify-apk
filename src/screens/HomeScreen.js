@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 import {
   Bell,
   Brain,
@@ -26,6 +26,7 @@ import {
   SectionTitle,
 } from "../components/ui";
 import { colors } from "../constants/theme";
+import { styles } from "./HomeScreen.styles";
 
 function QuickAction({ icon: Icon, title, subtitle, tint, onPress }) {
   return (
@@ -63,6 +64,11 @@ export default function HomeScreen({
   const urgent = pending.filter(
     (task) => Number(task.priorityScore) >= 60,
   ).length;
+  const workloadMinutes = pending.reduce(
+    (sum, task) => sum + (Number(task.estimatedDurationMinutes) || 45),
+    0,
+  );
+  const workloadHours = Math.ceil(workloadMinutes / 60);
 
   return (
     <Screen>
@@ -148,34 +154,10 @@ export default function HomeScreen({
         </View>
       </LinearGradient>
       <View style={styles.quickGrid}>
-        <QuickAction
-          icon={Plus}
-          title="Tambah"
-          subtitle="Tugas"
-          tint="#E2EDFF"
-          onPress={onAddTask}
-        />
-        <QuickAction
-          icon={Clock3}
-          title="Fokus"
-          subtitle="Pomodoro"
-          tint="#EEF2FF"
-          onPress={() => onFocus()}
-        />
-        <QuickAction
-          icon={Brain}
-          title="Prediksi"
-          subtitle="Materi"
-          tint="#FFF7E8"
-          onPress={onPredictions}
-        />
-        <QuickAction
-          icon={CalendarDays}
-          title="Jadwal"
-          subtitle="Sekolah"
-          tint="#EFF6FF"
-          onPress={onSchedule}
-        />
+        <QuickAction icon={Plus} title="Tambah" subtitle="Tugas" tint="#E2EDFF" onPress={onAddTask} />
+        <QuickAction icon={Clock3} title="Fokus" subtitle="Pomodoro" tint="#EEF2FF" onPress={() => onFocus()} />
+        <QuickAction icon={Brain} title="Prediksi" subtitle="Materi" tint="#FFF7E8" onPress={onPredictions} />
+        <QuickAction icon={CalendarDays} title="Jadwal" subtitle="Sekolah" tint="#EFF6FF" onPress={onSchedule} />
       </View>
       <Card style={styles.insight}>
         <View style={styles.insightIcon}>
@@ -187,11 +169,11 @@ export default function HomeScreen({
           </AppText>
           <AppText style={styles.insightSub}>
             {pending.length
-              ? `${pending.length} tugas aktif menunggu diselesaikan.`
+              ? `${pending.length} tugas aktif (${workloadHours}j estimasi) menunggu diselesaikan.`
               : "Belum ada tugas terdaftar. Tekan tombol Tambah untuk memulai."}
           </AppText>
         </View>
-        <Pressable onPress={() => onTab("ai-plan")}>
+        <Pressable onPress={() => onTab("tasks", { filter: "active" })}>
           <AppText style={styles.detail}>Detail</AppText>
         </Pressable>
       </Card>
@@ -266,7 +248,7 @@ export default function HomeScreen({
         </Pressable>
       </View>
       <Card>
-        <SectionTitle action="Lihat Semua" onAction={() => onTab("tasks")}>
+        <SectionTitle action="Lihat Semua" onAction={() => onTab("tasks", { filter: "active" })}>
           PRIORITAS TUGAS TERDEKAT ({pending.length})
         </SectionTitle>
         {loading && !pending.length ? (
@@ -304,238 +286,3 @@ export default function HomeScreen({
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  topActions: {
-    minHeight: 47,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-  },
-  avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#6D78F8",
-    backgroundColor: "#DCE9FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    color: colors.primary,
-    fontFamily: "Poppins_700Bold",
-    fontSize: 12,
-  },
-  greeting: { gap: 1, maxWidth: "57%", minWidth: 0 },
-  greetingTitle: { fontFamily: "Poppins_700Bold", fontSize: 12 },
-  greetingMeta: { flexDirection: "row", alignItems: "center", gap: 5 },
-  greetingSub: { color: colors.muted, fontSize: 8, flexShrink: 1 },
-  streak: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: "#FFF7ED",
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  streakText: {
-    color: "#C2410C",
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 7,
-  },
-  topSpacer: { flex: 1 },
-  topIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 22,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  notificationDot: {
-    position: "absolute",
-    right: 9,
-    top: 8,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: "#F43F5E",
-  },
-  heroCard: {
-    borderRadius: 16,
-    padding: 18,
-    marginTop: 7,
-    shadowColor: "#0B4BCC",
-    shadowOpacity: 0.21,
-    shadowRadius: 17,
-    shadowOffset: { width: 0, height: 9 },
-    elevation: 6,
-  },
-  metrics: { flexDirection: "row", alignItems: "center" },
-  metric: { flex: 1 },
-  metricDivider: {
-    height: 48,
-    width: 1,
-    backgroundColor: "rgba(255,255,255,0.24)",
-    marginHorizontal: 12,
-  },
-  metricLabel: { color: "#DCE8FF", fontSize: 9 },
-  metricValueRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 6,
-    marginTop: 3,
-  },
-  metricValue: { color: "#fff", fontFamily: "Poppins_700Bold", fontSize: 23 },
-  metricNote: { color: "#EAF2FF", fontSize: 9 },
-  urgent: { color: "#FFD84A" },
-  heroActions: {
-    borderTopWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 15,
-    paddingTop: 14,
-  },
-  heroButton: {
-    flex: 1,
-    minHeight: 44,
-    paddingHorizontal: 8,
-    borderWidth: 0,
-    backgroundColor: "#fff",
-  },
-  heroButtonSoft: {
-    flex: 1,
-    minHeight: 44,
-    paddingHorizontal: 8,
-    backgroundColor: "rgba(255,255,255,0.22)",
-  },
-  heroButtonText: { fontSize: 10 },
-  quickGrid: { flexDirection: "row", gap: 9 },
-  quick: {
-    flex: 1,
-    minHeight: 96,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 9,
-  },
-  quickIcon: {
-    width: 39,
-    height: 39,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  quickTitle: { fontFamily: "Poppins_700Bold", fontSize: 9 },
-  quickSub: { color: "#94A3B8", fontSize: 9, lineHeight: 13 },
-  insight: { flexDirection: "row", alignItems: "center", gap: 10, padding: 13 },
-  insightIcon: {
-    width: 37,
-    height: 37,
-    borderRadius: 16,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  insightCopy: { flex: 1 },
-  insightTitle: { fontFamily: "Poppins_700Bold", fontSize: 10 },
-  insightSub: { color: colors.muted, fontSize: 9, marginTop: 3 },
-  detail: {
-    color: colors.primary,
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 16,
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 9,
-  },
-  agenda: { gap: 12 },
-  agendaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderTopWidth: 1,
-    borderColor: "#F1F5F9",
-    paddingTop: 10,
-  },
-  agendaDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: colors.primary,
-  },
-  agendaCopy: { flex: 1 },
-  agendaTitle: { fontFamily: "Poppins_600SemiBold", fontSize: 10 },
-  agendaMeta: { color: colors.muted, fontSize: 9, marginTop: 2 },
-  featureRow: { flexDirection: "row", gap: 10 },
-  featureTile: {
-    flex: 1,
-    minHeight: 142,
-    borderRadius: 16,
-    padding: 14,
-    justifyContent: "space-between",
-  },
-  newTaskTile: { backgroundColor: "#6678F5" },
-  focusTile: { backgroundColor: "#FF952E" },
-  featureMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  featureIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.23)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  featureBadge: {
-    color: "#fff",
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 8,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 9,
-  },
-  featureTitle: {
-    color: "#fff",
-    fontFamily: "Poppins_700Bold",
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 13,
-  },
-  featureByline: { color: "#fff", fontSize: 8, marginTop: 5 },
-  taskRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderTopWidth: 1,
-    borderColor: "#F1F5F9",
-    paddingVertical: 10,
-  },
-  taskIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 16,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  taskCopy: { flex: 1 },
-  taskTitle: { fontFamily: "Poppins_600SemiBold", fontSize: 10 },
-  taskMeta: { color: colors.muted, fontSize: 9, marginTop: 2 },
-  noTasks: {
-    color: colors.muted,
-    fontSize: 10,
-    paddingTop: 14,
-    textAlign: "center",
-  },
-});

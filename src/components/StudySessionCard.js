@@ -65,7 +65,7 @@ export default function StudySessionCard({
         ) : null}
 
         <View style={styles.sessionActions}>
-          <Pressable onPress={() => onFocus?.(session.task)} style={styles.focus}>
+          <Pressable onPress={() => onFocus?.(session.task, session.durationMinutes || 45)} style={styles.focus}>
             <Clock3 size={13} color={colors.primary} />
             <AppText style={styles.focusText}>Mulai Fokus</AppText>
             <ChevronRight size={13} color={colors.primary} />

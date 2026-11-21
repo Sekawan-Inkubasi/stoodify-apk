@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import {
   CheckCircle2,
@@ -20,9 +20,10 @@ import {
 import { colors } from "../constants/theme";
 
 const filters = [
-  { id: "all", label: "Semua" },
+  { id: "active", label: "Aktif" },
   { id: "urgent", label: "Prioritas" },
   { id: "done", label: "Tuntas" },
+  { id: "all", label: "Semua" },
 ];
 
 function getSubjectPillLabel(item, allSubjects) {
@@ -101,16 +102,21 @@ export default function TasksScreen({
   tasks = [],
   subjects = [],
   loading,
+  initialFilter = "active",
   onOpenTask,
   onToggle,
   onAdd,
   onManageSubjects,
 }) {
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(initialFilter || "active");
   const [query, setQuery] = useState("");
   const [subject, setSubject] = useState("all");
   const safeTasks = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
   const safeSubjects = Array.isArray(subjects) ? subjects.filter(Boolean) : [];
+
+  useEffect(() => {
+    if (initialFilter) setFilter(initialFilter);
+  }, [initialFilter]);
 
   const subjectMap = useMemo(() => {
     const map = new Map();
@@ -124,7 +130,8 @@ export default function TasksScreen({
     () =>
       safeTasks.filter((task) => {
         if (!task) return false;
-        if (filter === "urgent" && Number(task.priorityScore) < 60)
+        if (filter === "active" && task.status === "selesai") return false;
+        if (filter === "urgent" && (task.status === "selesai" || Number(task.priorityScore) < 60))
           return false;
         if (filter === "done" && task.status !== "selesai") return false;
         if (subject !== "all" && String(task.subjectId) !== subject)
@@ -153,14 +160,24 @@ export default function TasksScreen({
         right={<Search size={17} color="#94A3B8" />}
       />
       <View style={styles.filters}>
-        {filters.map((item) => (
-          <Pill
-            key={item.id}
-            title={`${item.label}${item.id === "all" ? ` ${safeTasks.length}` : item.id === "urgent" ? ` ${safeTasks.filter((t) => Number(t.priorityScore) >= 60).length}` : ` ${safeTasks.filter((t) => t.status === "selesai").length}`}`}
-            active={filter === item.id}
-            onPress={() => setFilter(item.id)}
-          />
-        ))}
+        {filters.map((item) => {
+          let count = safeTasks.length;
+          if (item.id === "active") {
+            count = safeTasks.filter((t) => t.status !== "selesai").length;
+          } else if (item.id === "urgent") {
+            count = safeTasks.filter((t) => t.status !== "selesai" && Number(t.priorityScore) >= 60).length;
+          } else if (item.id === "done") {
+            count = safeTasks.filter((t) => t.status === "selesai").length;
+          }
+          return (
+            <Pill
+              key={item.id}
+              title={`${item.label} ${count}`}
+              active={filter === item.id}
+              onPress={() => setFilter(item.id)}
+            />
+          );
+        })}
       </View>
       <View style={styles.subjectRow}>
         <SlidersHorizontal size={15} color={colors.primary} />
