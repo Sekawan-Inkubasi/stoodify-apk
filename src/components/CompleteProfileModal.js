@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Keyboard, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { GraduationCap } from "lucide-react-native";
 import ModalSheet from "./ModalSheet";
 import { AppText, Button, Field, Pill } from "./ui";
@@ -11,6 +11,8 @@ const MAJOR_PRESETS = [
   { label: "Bahasa", value: "Bahasa" },
   { label: "TKJ", value: "Teknik Komputer Jaringan" },
   { label: "RPL", value: "Rekayasa Perangkat Lunak" },
+  { label: "TJAT", value: "Teknik Jaringan Akses Telekomunikasi" },
+  { label: "SIJA", value: "Sistem Informasi, Jaringan, Aplikasi" },
   { label: "DKV", value: "Desain Komunikasi Visual" },
   { label: "Akuntansi", value: "Akuntansi" },
 ];
@@ -28,6 +30,37 @@ export default function CompleteProfileModal({ visible, onClose, onSubmit, user 
   const [major, setMajor] = useState(user?.major || "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [activeField, setActiveField] = useState(null);
+  const scrollRef = useRef(null);
+
+  // Sync scroll position saat keyboard muncul dan field jurusan sedang difokuskan
+  useEffect(() => {
+    if (!visible) return undefined;
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const sub = Keyboard.addListener(showEvent, () => {
+      if (activeField === "major") {
+        setTimeout(() => {
+          scrollRef.current?.scrollToEnd({ animated: true });
+        }, 120);
+      }
+    });
+    return () => sub.remove();
+  }, [visible, activeField]);
+
+  const handleFocusSchool = () => {
+    setActiveField("school");
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 100);
+  };
+
+  const handleFocusMajor = () => {
+    setActiveField("major");
+    // Memberikan offset scroll agar field jurusan terangkat naik ke atas viewport
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+  };
 
   const handleSubmit = async () => {
     setError("");
@@ -63,6 +96,8 @@ export default function CompleteProfileModal({ visible, onClose, onSubmit, user 
       subtitle="Bantu AI Stoodify menyusun jadwal dan rekomendasi materi yang tepat"
       onClose={onClose}
       icon={GraduationCap}
+      scrollRef={scrollRef}
+      keyboardOffset={24}
     >
       <View style={styles.container}>
         <Field
@@ -70,6 +105,8 @@ export default function CompleteProfileModal({ visible, onClose, onSubmit, user 
           value={school}
           onChangeText={setSchool}
           placeholder="Contoh: SMA Negeri 1 Jakarta / SMK Telkom"
+          onFocus={handleFocusSchool}
+          onBlur={() => setActiveField((cur) => (cur === "school" ? null : cur))}
         />
 
         <View style={styles.group}>
@@ -91,6 +128,8 @@ export default function CompleteProfileModal({ visible, onClose, onSubmit, user 
           value={major}
           onChangeText={setMajor}
           placeholder="Contoh: MIPA, IPS, atau TKJ"
+          onFocus={handleFocusMajor}
+          onBlur={() => setActiveField((cur) => (cur === "major" ? null : cur))}
         />
 
         <View style={styles.group}>
@@ -130,6 +169,7 @@ const styles = StyleSheet.create({
   container: {
     gap: 12,
     paddingTop: 4,
+    paddingBottom: 24,
   },
   group: {
     gap: 6,

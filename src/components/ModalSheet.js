@@ -4,6 +4,7 @@ import {
   BackHandler,
   Keyboard,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,12 +24,18 @@ export default function ModalSheet({
   children,
   full = false,
   icon: Icon,
+  scrollRef,
+  keyboardOffset = 20,
+  contentContainerStyle,
 }) {
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
   const defaultHeight = screenHeight || 800;
 
   const [isOpen, setIsOpen] = useState(visible);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const internalScrollRef = useRef(null);
+  const activeScrollRef = scrollRef || internalScrollRef;
   const isClosing = useRef(false);
   const slideAnim = useRef(new Animated.Value(defaultHeight)).current;
 
@@ -40,6 +47,28 @@ export default function ModalSheet({
       return true;
     });
     return () => backSub.remove();
+  }, [isOpen]);
+
+  // Handle keyboard show/hide events for modal height and avoidance
+  useEffect(() => {
+    if (!isOpen) {
+      setKeyboardHeight(0);
+      return undefined;
+    }
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates?.height || 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, [isOpen]);
 
   // Sync isOpen state with visible prop
@@ -70,6 +99,7 @@ export default function ModalSheet({
     if (isClosing.current) return;
     isClosing.current = true;
     Keyboard.dismiss();
+    setKeyboardHeight(0);
     Animated.timing(slideAnim, {
       toValue: defaultHeight,
       duration: 200,
@@ -88,6 +118,11 @@ export default function ModalSheet({
   });
 
   if (!isOpen) return null;
+
+  const resolvedPaddingBottom =
+    keyboardHeight > 0
+      ? keyboardHeight + keyboardOffset
+      : Math.max(20, insets.bottom + 12);
 
   return (
     <Modal
@@ -112,7 +147,7 @@ export default function ModalSheet({
           style={[
             styles.sheet,
             {
-              paddingBottom: Math.max(20, insets.bottom + 12),
+              paddingBottom: resolvedPaddingBottom,
               transform: [{ translateY: slideAnim }],
             },
             full && styles.full,
@@ -139,9 +174,10 @@ export default function ModalSheet({
             </Pressable>
           </View>
           <ScrollView
+            ref={activeScrollRef}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.body}
+            contentContainerStyle={[styles.body, contentContainerStyle]}
           >
             {children}
           </ScrollView>
