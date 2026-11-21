@@ -93,6 +93,18 @@ export async function updateMe(userData) {
   return apiPatch(ENDPOINTS.USER_ME, userData);
 }
 
+export async function completeEducationProfile({ school, grade, major }) {
+  const result = await apiPatch(ENDPOINTS.USER_ONBOARDING, {
+    school,
+    grade: Number(grade),
+    major,
+  });
+  if (result?.success && result?.data) {
+    await setTokensAsync({ user: result.data });
+  }
+  return result?.data || result;
+}
+
 export async function getPreferences() {
   const result = await apiGet(ENDPOINTS.USER_PREFERENCES);
   return result?.data || null;
@@ -161,6 +173,7 @@ export default {
   logout,
   getMe,
   updateMe,
+  completeEducationProfile,
   getPreferences,
   updatePreferences,
   uploadAvatar,

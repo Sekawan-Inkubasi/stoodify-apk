@@ -13,11 +13,7 @@ import syncQueueService from '../services/syncQueueService';
 import useOfflineSync from './useOfflineSync';
 import useTaskMutations from './useTaskMutations';
 import tokenStorage, {
-  hydrateTokens,
-  hasActiveSession,
-  clearTokens,
-  subscribeTokenChange,
-  isTokenExpiringSoon,
+  hydrateTokens, hasActiveSession, clearTokens, subscribeTokenChange, isTokenExpiringSoon,
 } from '../services/tokenStorage';
 import localNotificationService from '../services/localNotificationService';
 import { performTokenRefresh } from '../services/apiClient';
@@ -114,7 +110,12 @@ export default function useAppData(showMessage) {
         predictions: flattenedPreds, stats: safeStats,
       });
 
-      const failed = results.slice(0, 5).some((item) => item.status === 'rejected');
+      const failed = results.slice(0, 5).some((item) => {
+        if (item.status !== 'rejected') return false;
+        // Jika 409 Conflict dari profile gate, jangan tampilkan generic error banner
+        const isProfileConflict = item.reason?.status === 409 || item.reason?.data?.errors?.profile_completed === 'false';
+        return !isProfileConflict;
+      });
       if (failed) setDataError('Sebagian data belum dapat dimuat dari server.');
       localNotificationService.syncAllReminders({ tasks: safeTasks, sessions: safeSessions, preferences });
     } catch (error) {
@@ -363,11 +364,29 @@ export default function useAppData(showMessage) {
     } catch (error) { showMessage(error.message || 'Foto profil belum dapat diunggah.', 'Gagal Unggah Foto'); }
   }, [showMessage, isOnline]);
 
+  const completeProfile = useCallback(async ({ school, grade, major }) => {
+    setLoading(true);
+    try {
+      const updatedUser = await auth.completeEducationProfile({ school, grade, major });
+      setUser((prev) => ({
+        ...prev,
+        ...updatedUser,
+        grade: updatedUser?.grade ? `Kelas ${updatedUser.grade}` : prev.grade,
+        profile_completed: true,
+      }));
+      setDataError('');
+      await refresh();
+      return updatedUser;
+    } finally {
+      setLoading(false);
+    }
+  }, [refresh]);
+
   return {
     isLoggedIn, setIsLoggedIn, authLoading, loading, dataError, user, setUser,
     tasks, subjects, schedules, sessions, notifications, predictions, stats, preferences,
     undoToastVisible, setUndoToastVisible, isOnline,
-    login, logout, refresh, addTask, toggleTask, deleteTask, updateProgress,
+    login, logout, refresh, completeProfile, addTask, toggleTask, deleteTask, updateProgress,
     createSubtask, toggleSubtask, addSubject, updateSubject, deleteSubject,
     addSchedule, deleteSchedule, reschedule, undoScheduleChange, editSession,
     markAllRead, markRead, generatePrediction, predictionFeedback,

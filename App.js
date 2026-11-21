@@ -23,6 +23,7 @@ import ChatDrawer from './src/components/ChatDrawer';
 import EmergencyWebView from './src/components/EmergencyWebView';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { PreferencesModal, ProModal } from './src/components/AccountModals';
+import CompleteProfileModal from './src/components/CompleteProfileModal';
 import { AppText } from './src/components/ui';
 import DraggableAssistantTab from './src/components/DraggableAssistantTab';
 import UndoToast from './src/components/UndoToast';
@@ -50,6 +51,7 @@ function StoodifyApp() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(null);
   const [onboardingForced, setOnboardingForced] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState('welcome');
+  const [profileModalDismissed, setProfileModalDismissed] = useState(false);
   const insets = useSafeAreaInsets();
   const [fontsLoaded] = useFonts({
     Poppins_400Regular: require('./assets/fonts/Poppins_400Regular.ttf'),
@@ -159,6 +161,14 @@ function StoodifyApp() {
     isOnline: data.isOnline,
   };
   const selectedTask = detailTask ? safeTasks.find((task) => task.id === detailTask.id) || detailTask : null;
+  const isGoogleProfileIncomplete = Boolean(
+    data.isLoggedIn &&
+    !onboardingForced &&
+    hasSeenOnboarding !== false &&
+    (data.user?.profile_completed === false ||
+     data.user?.needs_onboarding === true ||
+     (data.user?.auth_provider === 'google' && (!data.user?.school || !data.user?.grade || data.user?.grade === 'Kelas 0' || data.user?.grade === 0)))
+  );
 
   return <View style={styles.root}><StatusBar barStyle="dark-content" backgroundColor={colors.canvas} />
     {!data.isLoggedIn ? (
@@ -211,6 +221,7 @@ function StoodifyApp() {
     <NotificationsModal visible={notificationsVisible} onClose={() => setNotificationsVisible(false)} notifications={data.notifications} onMarkAll={data.markAllRead} onMarkRead={data.markRead} loading={data.loading} />
     <PredictionsModal visible={predictionsVisible} onClose={() => setPredictionsVisible(false)} subjects={data.subjects} predictions={data.predictions} onGenerate={data.generatePrediction} onFeedback={data.predictionFeedback} busy={data.loading} isOnline={data.isOnline} />
     <ChatDrawer visible={chatVisible} onClose={() => setChatVisible(false)} user={data.user} tasks={data.tasks} sessions={data.sessions} onReschedule={data.reschedule} onFocus={() => openFocus()} showMessage={showMessage} isOnline={data.isOnline} />
+    <CompleteProfileModal visible={isGoogleProfileIncomplete && !profileModalDismissed} user={data.user} onClose={() => setProfileModalDismissed(true)} onSubmit={async (fields) => { await data.completeProfile(fields); setProfileModalDismissed(true); }} />
     <PreferencesModal visible={preferencesVisible} onClose={() => setPreferencesVisible(false)} value={data.preferences} onSave={data.savePreferences} busy={data.loading} />
     <ProModal visible={proVisible} onClose={() => setProVisible(false)} showMessage={showMessage} />
   </View>;
