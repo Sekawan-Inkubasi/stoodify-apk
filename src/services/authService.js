@@ -92,6 +92,16 @@ export async function logout() {
     // Logout server gagal tetap bersihkan sesi lokal
   } finally {
     await clearTokensAsync();
+    try {
+      const { NativeModules, TurboModuleRegistry } = require('react-native');
+      const isAvailable = Boolean(NativeModules?.RNGoogleSignin || TurboModuleRegistry?.get?.('RNGoogleSignin'));
+      if (isAvailable) {
+        const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+        await GoogleSignin.signOut();
+      }
+    } catch {
+      // Abaikan jika native module belum siap atau sudah signout
+    }
   }
 }
 

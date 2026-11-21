@@ -128,6 +128,9 @@ export default function AuthScreen({
         offlineAccess: false,
       });
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      try {
+        await GoogleSignin.signOut();
+      } catch {}
       const response = await GoogleSignin.signIn();
       const idToken = response?.data?.idToken || response?.idToken;
       if (!idToken) throw new Error("Gagal memperoleh ID token dari akun Google.");

@@ -121,7 +121,7 @@ export default function ModalSheet({
 
   const resolvedPaddingBottom =
     keyboardHeight > 0
-      ? keyboardHeight + keyboardOffset
+      ? keyboardHeight + Math.max(keyboardOffset, (insets.bottom || 0) + keyboardOffset)
       : Math.max(20, insets.bottom + 12);
 
   return (

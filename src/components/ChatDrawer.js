@@ -232,7 +232,7 @@ export default function ChatDrawer({
             style={[
               styles.keyboardContainer,
               Platform.OS === "android" && keyboardHeight > 0 && {
-                paddingBottom: keyboardHeight,
+                paddingBottom: keyboardHeight + Math.max(28, (insets.bottom || 0) + 16),
               },
             ]}
           >
